@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#008069" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>客服聊天 · Aus Granny Flat</title>
+<style>
+:root {
+  --wa-green: #00a884;
+  --wa-green-dark: #008069;
+  --wa-teal: #075e54;
+  --wa-chat-bg: #efeae2;
+  --wa-panel: #ffffff;
+  --wa-bubble-out: #d9fdd3;
+  --wa-bubble-in: #ffffff;
+  --wa-bubble-agent: #fff3cd;
+  --wa-text: #111b21;
+  --wa-muted: #667781;
+  --wa-border: #e9edef;
+  --wa-danger: #ea0038;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --header-h: 56px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--wa-chat-bg);
+  color: var(--wa-text);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* ============ 布局：单栏切换 ============ */
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--wa-panel);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
+}
+/* 三张视图的层级：列表(0) < 对话(1) < 编辑(2)
+   注意：每张视图都必须有明确的初始位移，否则会在首屏直接盖在最上层。
+   早期版本漏写了 #view-edit 的初始 transform，导致一进页面就显示"编辑联系人"。 */
+#view-list     { transform: translateX(0);    z-index: 0; }
+#view-chat     { transform: translateX(100%); z-index: 1; }
+#view-edit     { transform: translateX(100%); z-index: 2; }
+#view-list.pushed { transform: translateX(-28%); }
+#view-chat.open   { transform: translateX(0); }
+#view-edit.open   { transform: translateX(0); }
+#view-chat.pushed { transform: translateX(-28%); }
+
+/* ============ 顶栏 ============ */
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: calc(var(--header-h) + var(--safe-top));
+  padding: var(--safe-top) 8px 0 8px;
+  background: var(--wa-green-dark);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  z-index: 10;
+}
+.topbar .title {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  padding-left: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar .sub {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: .85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 图标按钮：至少 44px 触控区 */
+.iconbtn {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.iconbtn:active { background: rgba(255,255,255,.18); }
+.iconbtn[hidden] { display: none; }
+
+/* ============ 客户列表 ============ */
+.list-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--wa-panel);
+  padding-bottom: var(--safe-bottom);
+}
+
+.search-wrap {
+  padding: 8px 10px;
+  background: var(--wa-panel);
+  border-bottom: 1px solid var(--wa-border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.search-wrap input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 20px;
+  background: #f0f2f5;
+  font-size: 16px; /* >=16px 防 iOS 自动缩放 */
+  color: var(--wa-text);
+  outline: none;
+}
+.search-wrap input::placeholder { color: #8696a0; }
+
+.contact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  min-height: 68px;
+  border-bottom: 1px solid var(--wa-border);
+  cursor: pointer;
+  background: var(--wa-panel);
+}
+.contact:active { background: #f0f2f5; }
+
+.avatar {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--wa-green-dark);
+  text-transform: uppercase;
+}
+
+.contact-main { flex: 1; min-width: 0; }
+.contact-row1 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.contact-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contact.unread .contact-name { font-weight: 700; }
+.contact.unread .contact-preview { color: var(--wa-text); font-weight: 600; }
+.contact-time {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--wa-muted);
+}
+.contact-row2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.contact-preview {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--wa-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.badge-unread {
+  flex: 0 0 auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--wa-green);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pill-human {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: #fff3cd;
+  color: #8a6d00;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill-tag {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: #dbe7f0;
+  color: #2e5d7d;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--wa-muted);
+  font-size: 14px;
+}
+
+/* ============ 聊天区 ============ */
+.chat-bg {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 10px 16px;
+  background:
+    linear-gradient(rgba(239,234,226,.94), rgba(239,234,226,.94)),
+    repeating-linear-gradient(45deg, #e6ded3 0 2px, transparent 2px 12px);
+}
+#msgList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 100%;
+  justify-content: flex-end;
+}
+
+.msg { display: flex; }
+.msg.out { justify-content: flex-end; }
+
+.bubble {
+  max-width: 86%;
+  padding: 7px 10px 6px;
+  border-radius: 10px;
+  background: var(--wa-bubble-in);
+  box-shadow: 0 1px 1px rgba(11,20,26,.10);
+  font-size: 15px;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.msg.out .bubble { background: var(--wa-bubble-out); }
+.msg.agent .bubble { background: var(--wa-bubble-agent); }
+
+.bubble .meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--wa-muted);
+  text-align: right;
+}
+.msg.out .bubble .meta { color: #667781; }
+
+/* 中文翻译块 */
+.trans-zh {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0,0,0,.16);
+  color: #3b4a54;
+  font-size: 14px;
+}
+.trans-tag {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #dbe7f0;
+  color: #2e5d7d;
+  font-size: 10.5px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+
+.bubble a { color: #027eb5; word-break: break-all; }
+
+/* 日期分隔 */
+.daysep {
+  align-self: center;
+  margin: 10px 0 4px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 1px 1px rgba(11,20,26,.08);
+  font-size: 12px;
+  color: var(--wa-muted);
+}
+
+.sysnote {
+  align-self: center;
+  margin: 4px 0;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: rgba(255,243,205,.95);
+  color: #8a6d00;
+  font-size: 12.5px;
+  text-align: center;
+  max-width: 90%;
+}
+
+/* 正在输入 */
+.typing {
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px;
+}
+.typing span {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #9aa8ae;
+  animation: blink 1.3s infinite;
+}
+.typing span:nth-child(2) { animation-delay: .22s; }
+.typing span:nth-child(3) { animation-delay: .44s; }
+@keyframes blink { 0%,60%,100% { opacity:.25; } 30% { opacity:1; } }
+
+/* ============ 接管提示条 ============ */
+.modebar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  background: #e8f5e9;
+  color: #1b5e20;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+.modebar.human {
+  background: #fff3cd;
+  color: #8a6d00;
+}
+.modebar .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+/* ============ 输入区 ============ */
+.composer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 7px 8px calc(7px + var(--safe-bottom));
+  background: #f0f2f5;
+  border-top: 1px solid var(--wa-border);
+}
+.composer textarea {
+  flex: 1 1 auto;
+  min-height: 42px;
+  max-height: 120px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 21px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 16px; /* 防 iOS 缩放 */
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  color: var(--wa-text);
+}
+.composer textarea::placeholder { color: #8696a0; }
+
+.sendbtn {
+  flex: 0 0 auto;
+  width: 46px; height: 46px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--wa-green);
+  color: #fff;
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+.sendbtn:active { transform: scale(.93); }
+.sendbtn:disabled { background: #b9c2c7; }
+
+.micbtn {
+  flex: 0 0 auto;
+  width: 42px; height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--wa-green-dark);
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+.micbtn:active { transform: scale(.93); }
+.micbtn.recording {
+  background: #fde8e8;
+  color: var(--wa-danger);
+  animation: micPulse 1.1s ease-in-out infinite;
+}
+.micbtn:disabled { color: #8696a0; background: #e8ebed; }
+@keyframes micPulse { 50% { box-shadow: 0 0 0 7px rgba(234,0,56,.12); } }
+
+/* ============ 斜杠模板选择器 ============ */
+/* 输入框里打 "/" 时弹出；选择后保留命令，由后端发送真实 Twilio 模板 */
+.tpl-pop {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  max-height: 46vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--wa-panel);
+  box-shadow: 0 6px 24px rgba(11,20,26,.26);
+  border: 1px solid var(--wa-border);
+  z-index: 50;
+  display: none;
+}
+.tpl-pop.show { display: block; animation: tplIn .14s ease-out; }
+@keyframes tplIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tpl-pop .tpl-head {
+  padding: 6px 10px 8px;
+  font-size: 12px;
+  color: var(--wa-muted);
+  border-bottom: 1px solid var(--wa-border);
+  margin-bottom: 4px;
+}
+.tpl-pop .tpl-head b { color: #3b4a54; }
+
+.tpl-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  min-height: 48px;
+}
+.tpl-item:active,
+.tpl-item.active { background: #f0f7f2; }
+
+.tpl-item .tpl-name {
+  flex: 0 0 auto;
+  min-width: 46px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--wa-green-dark);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: .2px;
+}
+.tpl-item .tpl-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--wa-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tpl-empty {
+  padding: 14px;
+  text-align: center;
+  color: var(--wa-muted);
+  font-size: 13.5px;
+}
+
+/* composer 需要作为弹出层的定位参照 */
+.composer { position: relative; }
+
+/* ============ 编辑页 ============ */
+/* 位移与层级已在上面「布局」区块统一声明，此处不再重复，避免优先级打架。 */
+
+.peer-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.peer-head:active { background: rgba(255,255,255,.14); }
+.peer-head .avatar {
+  width: 38px; height: 38px;
+  font-size: 15px;
+  background: rgba(255,255,255,.22);
+}
+.peer-head .title-text {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+}
+.peer-head .title-text .peer-main {
+  font-size: 16.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 5px;
+}
+.peer-head .edit-hint {
+  font-size: 11px;
+  opacity: .75;
+  font-weight: 400;
+}
+
+.form {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px calc(24px + var(--safe-bottom));
+  background: var(--wa-panel);
+}
+.form .card {
+  background: #fff;
+  border: 1px solid var(--wa-border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.fhead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.fhead .avatar {
+  width: 56px; height: 56px;
+  font-size: 21px;
+}
+.fhead .fphone {
+  font-size: 17px;
+  font-weight: 600;
+  min-width: 0;
+  word-break: break-all;
+}
+.fhead .fwa {
+  font-size: 12.5px;
+  color: var(--wa-muted);
+  margin-top: 2px;
+  min-width: 0;
+  word-break: break-all;
+}
+
+.flabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #3b4a54;
+  margin: 16px 0 7px;
+}
+.flabel:first-child { margin-top: 0; }
+.flabel .opt { color: var(--wa-muted); font-weight: 400; font-size: 12px; }
+
+.finput {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1.5px solid #d6dde1;
+  border-radius: 10px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--wa-text);
+  outline: none;
+  transition: border-color .15s;
+}
+.finput:focus { border-color: var(--wa-green-dark); }
+.finput::placeholder { color: #a5b1b8; }
+.ftextarea {
+  width: 100%;
+  min-height: 92px;
+  padding: 12px 14px;
+  border: 1.5px solid #d6dde1;
+  border-radius: 10px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--wa-text);
+  outline: none;
+  resize: vertical;
+}
+.ftextarea:focus { border-color: var(--wa-green-dark); }
+.crm-help {
+  margin: 10px 0 0;
+  color: var(--wa-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.row2 { display: flex; gap: 10px; }
+.row2 > div { flex: 1; min-width: 0; }
+
+.preview-box {
+  margin-top: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f0f7f2;
+  border: 1px dashed #9ecdb1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.preview-avatar {
+  flex: 0 0 auto;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--wa-green-dark);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  text-transform: uppercase;
+}
+.preview-name {
+  flex: 1; min-width: 0;
+}
+.preview-name .pv-label {
+  font-size: 11px;
+  color: #4c7a5c;
+  margin-bottom: 2px;
+}
+.preview-name .pv-value {
+  font-size: 17px;
+  font-weight: 600;
+  word-break: break-all;
+  line-height: 1.35;
+}
+.preview-name .pv-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #dbe7f0;
+  color: #2e5d7d;
+  font-size: 11px;
+  font-weight: 500;
+  vertical-align: 2px;
+}
+
+.savebtn {
+  width: 100%;
+  height: 50px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--wa-green);
+  color: #fff;
+  font-family: inherit;
+  font-size: 16.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .1s, background .15s;
+}
+.savebtn:active { transform: scale(.98); }
+.savebtn:disabled { background: #b9c2c7; }
+
+.editbtn {
+  flex: 0 0 auto;
+  width: 36px; height: 36px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8696a0;
+  font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.editbtn:active { background: #e9edef; }
+
+/* ============ Toast ============ */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(76px + var(--safe-bottom));
+  transform: translateX(-50%) translateY(14px);
+  max-width: 84vw;
+  padding: 9px 16px;
+  border-radius: 20px;
+  background: rgba(17,27,33,.92);
+  color: #fff;
+  font-size: 13.5px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s, transform .22s;
+  z-index: 100;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ============ 加载 ============ */
+.spinner {
+  width: 22px; height: 22px;
+  margin: 40px auto;
+  border: 2.5px solid #d6dde1;
+  border-top-color: var(--wa-green-dark);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 宽屏（平板/桌面）时给个居中容器，避免拉伸难看 */
+@media (min-width: 720px) {
+  #app {
+    max-width: 520px;
+    margin: 0 auto;
+    box-shadow: 0 0 24px rgba(0,0,0,.14);
+  }
+}
+.avatar.priority-level-1 { background: linear-gradient(145deg, #90a4ae, #546e7a); }
+.avatar.priority-level-2 { background: linear-gradient(145deg, #7986cb, #3f51b5); }
+.avatar.priority-level-3 { background: linear-gradient(145deg, #42a5f5, #1565c0); }
+.avatar.priority-level-4 { background: linear-gradient(145deg, #26c6da, #00838f); }
+.avatar.priority-level-5 { background: linear-gradient(145deg, #26a69a, #00695c); }
+.avatar.priority-level-6 { background: linear-gradient(145deg, #66bb6a, #2e7d32); }
+.avatar.priority-level-7 { background: linear-gradient(145deg, #9e9d24, #6d6b12); }
+.avatar.priority-level-8 { background: linear-gradient(145deg, #ffb74d, #ef6c00); }
+.avatar.priority-level-9 { background: linear-gradient(145deg, #ff7043, #d84315); }
+.avatar.priority-level-10 { background: linear-gradient(145deg, #ef5350, #b71c1c); }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ========== 客户列表 ========== -->
+  <section class="view" id="view-list">
+    <header class="topbar">
+      <div class="title">
+        客服聊天
+        <span class="sub" id="listSub">加载中…</span>
+      </div>
+      <button class="iconbtn" id="btnRefresh" title="刷新" aria-label="刷新">⟳</button>
+      <button class="iconbtn" id="btnCrm" title="CRM 首页" aria-label="CRM 首页">▦</button>
+    </header>
+
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="搜索姓名 / 手机号 / 城市"
+             autocomplete="off" autocorrect="off" />
+    </div>
+
+    <div class="list-scroll">
+      <div id="contactList">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 对话 ========== -->
+  <section class="view" id="view-chat">
+    <header class="topbar">
+      <button class="iconbtn" id="btnBack" aria-label="返回">‹</button>
+      <div class="peer-head" id="peerHead" role="button" aria-label="编辑联系人">
+        <div class="avatar" id="peerAvatar">?</div>
+        <div class="title-text">
+          <span class="peer-main"><span id="peerName">—</span></span>
+          <span class="sub" id="peerSub"></span>
+        </div>
+      </div>
+      <button class="iconbtn" id="btnToggle" aria-label="接管开关">🤖</button>
+    </header>
+
+    <div class="chat-bg" id="chatScroll">
+      <div id="msgList"></div>
+    </div>
+
+    <div class="modebar" id="modeBar">
+      <span class="dot"></span>
+      <span id="modeText">机器人正在接待</span>
+    </div>
+
+    <form class="composer" id="composer" autocomplete="off">
+      <!-- 斜杠模板选择器：输入 / 时弹出 -->
+      <div class="tpl-pop" id="tplPop">
+        <div class="tpl-head">选择模板 <b>（确认后发送 WhatsApp 模板）</b></div>
+        <div id="tplList"></div>
+      </div>
+      <button class="micbtn" id="btnMic" type="button" aria-label="中文语音输入" title="说中文，自动翻译成英文">🎙</button>
+      <textarea id="input" rows="1" placeholder="输入消息…（打 / 可选择模板）"
+                enterkeyhint="send"></textarea>
+      <button class="sendbtn" id="btnSend" type="submit" aria-label="发送">➤</button>
+    </form>
+  </section>
+
+  <!-- ========== 编辑联系人 ========== -->
+  <section class="view" id="view-edit">
+    <header class="topbar">
+      <button class="iconbtn" id="btnEditBack" aria-label="返回">‹</button>
+      <div class="title">编辑联系人</div>
+    </header>
+
+    <div class="form">
+      <div class="card">
+        <div class="fhead">
+          <div class="avatar" id="editAvatar">?</div>
+          <div style="flex:1; min-width:0;">
+            <div class="fphone" id="editPhone">—</div>
+            <div class="fwa" id="editWaName">WhatsApp 资料：—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flabel">标签 <span class="opt">（显示在名字前，如：悉尼业主）</span></div>
+        <input class="finput" id="editTag" type="text" maxlength="20"
+               placeholder="输入识别标签" autocomplete="off" />
+
+        <div class="flabel">名 <span class="opt">First name</span></div>
+        <div class="row2">
+          <div><input class="finput" id="editFirst" type="text" maxlength="40" autocomplete="off" /></div>
+        </div>
+
+        <div class="flabel">姓 <span class="opt">Last name（显示名优先用姓）</span></div>
+        <div class="row2">
+          <div><input class="finput" id="editLast" type="text" maxlength="40" autocomplete="off" /></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flabel">显示名预览 <span class="opt">（标签 + 姓，姓空用名）</span></div>
+        <div class="preview-box">
+          <div class="preview-avatar" id="pvAvatar">?</div>
+          <div class="preview-name">
+            <div class="pv-label">保存后列表和对话中显示</div>
+            <div class="pv-value" id="pvName">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flabel">客户优先级 <span class="opt">（人工设置）</span></div>
+        <select class="finput" id="editPriority">
+          <option value="hot">重点客户</option>
+          <option value="warm">意向客户</option>
+          <option value="cold">咨询客户</option>
+          <option value="non_target">非目标客户</option>
+        </select>
+
+        <div class="flabel">下一步任务 <span class="opt">（人工安排）</span></div>
+        <textarea class="ftextarea" id="editNextAction" maxlength="300"
+                  placeholder="例如：确认户型后发送初步报价"></textarea>
+
+        <div class="flabel">会议 / 跟进时间 <span class="opt">（可选）</span></div>
+        <input class="finput" id="editFollowUpDue" type="datetime-local" />
+        <p class="crm-help">保存后会同步到 CRM 首页和任务列表，不会自动向客户发送消息。</p>
+      </div>
+
+      <button class="savebtn" id="btnSaveEdit" type="button">保存联系人与 CRM</button>
+    </div>
+  </section>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- 状态 ----------
+  let contacts = [];
+  let selectedId = null;
+  let selectedContact = null;
+  let filterText = "";
+  let sending = false;
+  let editingId = null;
+  let savingEdit = false;
+  let speechRecognition = null;
+  let recognizing = false;
+  let translatingVoice = false;
+
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const viewList   = $("view-list");
+  const viewChat   = $("view-chat");
+  const viewEdit   = $("view-edit");
+  const contactList = $("contactList");
+  const listSub    = $("listSub");
+  const searchEl   = $("search");
+  const peerHead   = $("peerHead");
+  const peerAvatar = $("peerAvatar");
+  const peerName   = $("peerName");
+  const peerSub    = $("peerSub");
+  const msgList    = $("msgList");
+  const chatScroll = $("chatScroll");
+  const modeBar    = $("modeBar");
+  const modeText   = $("modeText");
+  const composer   = $("composer");
+  const inputEl    = $("input");
+  const btnMic     = $("btnMic");
+  const btnSend    = $("btnSend");
+  const btnToggle  = $("btnToggle");
+  const toastEl    = $("toast");
+  const tplPop     = $("tplPop");
+  const tplList    = $("tplList");
+
+  // ---------- 斜杠模板 ----------
+  // 数据来自 Twilio Content 模板（名称即真实 friendly_name：60s / 70s / 80s）。
+  // 插入时的两处修正：
+  //   1) 去掉 "Hello {{1}}, " 称呼段（按需求，只保留正文）
+  //   2) 面积数字按模板名修正 —— Twilio 原件里 70s/80s 正文都误写成 "60 m²"，
+  //      这里按名称改成对应面积，避免"文字说60、链接给70"的错位。
+  //      同时把原件写坏的 "https:/" 补成 "https://"（否则客户点不开）。
+    const SLASH_TEMPLATES = [
+    // HXf42f7b939af24efa5cc104a1cac356ba
+    {
+      key: "60price",
+      name: "60price",
+      area: 60,
+      desc: "60㎡ 报价（两档套餐）",
+      text: "🏠 Two Flexible Pricing Packages for Your Granny Flat Project for 60 sqm\n\n📦 Package 1 | AUD 77,400‑95,000\nCovers all building materials + full delivery transport straight to port of your city.\n\nYou can register as an owner‑builder and organise a local builder for installation by yourself, which can save you roughly $20k‑$30k on labour costs.\n\n🔧 Package 2 | AUD 153,000‑187,000\nAll materials + professional on‑site installation + full council certification & OC approval included.\nWe manage the entire build process end to end with our licensed local builder.\n\nThe final quotation is subject to the following factors: the number of bathrooms, transportation distance, and whether the porch and deck are included.\n\n❓️ ❓ Could you let me know which floor‑plan you like?"
+    },
+    // HX917e8386f1811c8ecd83e6175b386b65
+    {
+      key: "70price",
+      name: "70price",
+      area: 70,
+      desc: "70㎡ 报价（两档套餐）",
+      text: "🏠 Two Flexible Pricing Packages for Your Granny Flat Project for 70 sqm\n\n📦 Package 1 | AUD 86,000‑106,000\nCovers all building materials + full delivery transport straight to port of your city.\nYou can register as an owner‑builder and organise a local builder for installation by yourself, which can save you roughly $20k‑$30k on labour costs.\n\n🔧 Package 2 | AUD 167,000‑205,000\nAll materials + professional on‑site installation + full council certification & OC approval included.\nWe manage the entire build process end to end with our licensed local builder.\n\nThe final quotation is subject to the following factors: the number of bathrooms, transportation distance, and whether the porch and deck are included."
+    },
+    // HXd66cda46b5e2f995dcff11716dea82ba
+    {
+      key: "60s",
+      name: "60s",
+      area: 60,
+      desc: "60㎡ 户型链接 · /m/60",
+      text: "Here are four 60 m² two‑bedroom granny‑flat floor plans. Please review them and let me know which one you prefer.\n\nhttps://www.ausgrannyflat.com/m/60"
+    },
+    // HX101ab5668b00f2aad79347853f177f03
+    {
+      key: "70s",
+      name: "70s",
+      area: 70,
+      desc: "70㎡ 户型链接 · /m/70",
+      text: "Here are four 70 m² two‑bedroom granny‑flat floor plans. Please review them and let me know which one you prefer.\n\nhttps://www.ausgrannyflat.com/m/70"
+    },
+    // HX0938dac4bb174f6487541cbc8b635484
+    {
+      key: "80s",
+      name: "80s",
+      area: 80,
+      desc: "80㎡ 户型链接 · /m/80",
+      text: "Here are four 80 m² two‑bedroom granny‑flat floor plans. Please review them and let me know which one you prefer.\n\nhttps://www.ausgrannyflat.com/m/80"
+    },
+    // HXad1b8c385087a29613227481a2953d15
+    {
+      key: "role",
+      name: "role",
+      area: null,
+      desc: "客户身份选择（首次答复后的后续回合）",
+      text: "To serve you better, could you tell me which best describes you: owner-occupier, builder, investor, distributor, or other?"
+    },
+    // HX3d2798efe159204f50ba1f747dbfaf6d
+    {
+      key: "introduce",
+      name: "introduce",
+      area: null,
+      desc: "产品介绍（标准/团队/工艺）",
+      text: "🏠 Our Granny Flat Solution ✨\n\nMost building materials are sourced from China. Design, materials & construction fully comply with Australian Class 1A granny‑flat standards.\n\n🏭 The unit is pre‑fabricated & pre‑assembled in China factory, shipped to Australia via container sea freight. Our trusted local Australian builder completes on‑site installation.\n\n👷‍♂️ Our full local team including Australian architects, structural engineers, surveyors, licensed builders & qualified electricians/plumbers work together. We support you to secure building approval and final Occupancy Certificate (OC).\n\n✅ All inspection‑required sections are left exposed for site survey check. Part of plumbing & electrical work will be finished by local tradesmen.\n\n🏗️ Light‑weight steel frame as main structure. Other finishing materials are same as conventional timber‑frame houses in Australia. You can pick your preferred finishing materials freely.\n\n🔧 After handover, all building warranty & maintenance services are provided directly by our local Australian builder.\n\nWould you like to know more details? 😊"
+    },
+    // HXcddfac471c4531d8746a3474538471bc
+    {
+      key: "shiping",
+      name: "shiping",
+      area: null,
+      desc: "物流说明（集装箱/拼装）",
+      text: " Each house requires one 40-foot open-top container and one 20-foot standard container. \nThe bathrooms are modular, while the rest of the structure is panel-based.To ensure we obtain the final Occupation Certificate (OC), \n\nthese prefabricated components must be assembled on site."
+    },
+    // HX2c90e2ae47b7f28b6a1e4df94d7fa98f
+    {
+      key: "address",
+      name: "address",
+      area: null,
+      desc: "催客户提供地址",
+      text: "To provide you with a quote and help you find a suitable local builder, please let us know your address."
+    }
+  ];
+
+  let tplOpen = false;
+  let tplActiveIdx = 0;
+  let tplMatches = [];
+
+  // ---------- 工具 ----------
+  let toastTimer = null;
+  function toast(msg, ms) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), ms || 2600);
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // 把纯文本里的 URL 变成可点链接，其余转义
+  function linkify(text) {
+    return esc(text).replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+    );
+  }
+
+  // 时间：今天只显示时分，否则显示月/日
+  function fmtTime(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    if (sameDay) return hh + ":" + mm;
+    const isThisYear = d.getFullYear() === now.getFullYear();
+    const md = (d.getMonth() + 1) + "/" + d.getDate();
+    return isThisYear ? md : (d.getFullYear() + "/" + md);
+  }
+
+  // 聊天记录始终显示完整日期和时间，避免跨日消息混淆。
+  function fmtMsgTime(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hour = String(d.getHours()).padStart(2, "0");
+    const minute = String(d.getMinutes()).padStart(2, "0");
+    return year + "/" + month + "/" + day + " " + hour + ":" + minute;
+  }
+
+  function dayKey(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  }
+
+  function dayLabel(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const now = new Date();
+    const k = dayKey(iso);
+    if (k === dayKey(now.toISOString())) return "今天";
+    const y = new Date(now.getTime() - 86400000);
+    if (k === dayKey(y.toISOString())) return "昨天";
+    return (d.getMonth() + 1) + "月" + d.getDate() + "日";
+  }
+
+  // 从名字取头像字母：优先英文字母，中文取首字，都没有就取数字尾
+  function avatarChar(c) {
+    const raw = (c.personal_name || c.whatsapp_profile_name || c.name || "").trim();
+    if (!raw) return "?";
+    const m = raw.match(/[A-Za-z]/);
+    if (m) return m[0];
+    const zh = raw.match(/[\u4e00-\u9fa5]/);
+    if (zh) return zh[0];
+    const dig = raw.replace(/\D/g, "");
+    return dig ? dig.slice(-2) : raw[0];
+  }
+
+  function avatarPriorityLevel(c) {
+    const score = Math.max(0, Math.min(100, Number(c && c.qualification_score) || 0));
+    const scoreLevel = Math.max(1, Math.min(10, Math.ceil(score / 10)));
+    const priority = c && c.lead_temperature;
+    if (priority === "non_target") return 1;
+    if (priority === "cold") return Math.min(4, scoreLevel);
+    if (priority === "warm") return Math.max(5, Math.min(7, scoreLevel));
+    if (priority === "hot") return Math.max(8, scoreLevel);
+    return scoreLevel;
+  }
+
+  function avatarClass(c) {
+    return "avatar priority-level-" + avatarPriorityLevel(c);
+  }
+
+  // 列表里显示的名字：
+  // 1) 客服手工锁定的显示名（name_manual）最优先 —— 编辑页保存的「标签+姓/名」就是它
+  // 2) WhatsApp 资料 / 个人姓名
+  // 3) 手机号兜底
+  function displayName(c) {
+    const manual = (c.name_manual ? c.name : "").trim();
+    if (manual && !/^\+?\d[\d\s]*$/.test(manual)) return manual;
+    const n = (c.personal_name || c.whatsapp_profile_name || "").trim();
+    if (n && !/^\+?\d[\d\s]*$/.test(n)) return n;
+    return c.whatsapp_phone || c.name || c.session_id;
+  }
+
+  // 联系人的标签（编辑页保存的识别标签存在 tags[0]）
+  function tagOf(c) {
+    const t = (c.tags || []).filter(Boolean);
+    return t.length ? t[0].trim() : "";
+  }
+
+  function subtitleOf(c) {
+    const bits = [];
+    if (c.location_summary) bits.push(c.location_summary);
+    else if (c.city) bits.push(c.city);
+    if (c.workflow_label && c.workflow_label !== "未分类") bits.push(c.workflow_label);
+    return bits.join(" · ");
+  }
+
+  // ---------- 网络 ----------
+  async function api(path, opts) {
+    const res = await fetch(path, Object.assign({
+      credentials: "same-origin",
+      headers: { "Accept": "application/json" }
+    }, opts || {}));
+
+    if (res.status === 401) {
+      // 会话过期 → 回登录页，登录后跳回这里
+      const back = encodeURIComponent(location.pathname);
+      location.href = "/admin/login?next=" + back;
+      throw new Error("登录已过期");
+    }
+    if (!res.ok) {
+      let detail = "HTTP " + res.status;
+      try { const j = await res.json(); if (j && j.detail) detail = j.detail; } catch (e) {}
+      throw new Error(detail);
+    }
+    return res.json();
+  }
+
+  // ---------- 列表渲染 ----------
+  function chatTimeValue(contact) {
+    // 与后端排序键保持一致：sort_key = max(最后消息时间, 资料编辑时间)
+    const raw = contact && (contact.sort_key || contact.updated_at || contact.last_message_at || contact.created_at);
+    const value = raw ? Date.parse(raw) : NaN;
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function sortContactsByChatTime(items) {
+    // 0 消息客户沉底：它们的 updated_at 就是导入时刻（最新），
+    // 若只按时间排会被错误地顶到最前面
+    return [...(items || [])].sort((a, b) => {
+      const ha = a && a.has_messages ? 1 : 0;
+      const hb = b && b.has_messages ? 1 : 0;
+      if (ha !== hb) return hb - ha;
+      return chatTimeValue(b) - chatTimeValue(a);
+    });
+  }
+
+  function renderContacts() {
+    const q = filterText.trim().toLowerCase();
+
+    const list = contacts.filter((c) => {
+      if (!q) return true;
+      const hay = [
+        c.personal_name, c.whatsapp_profile_name, c.name,
+        c.whatsapp_phone, c.city, c.state, c.location_summary,
+        c.address, c.postcode, c.last_message, c.workflow_label,
+        tagOf(c)
+      ].filter(Boolean).join(" ").toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+
+    listSub.textContent = q
+      ? ("匹配 " + list.length + " / " + contacts.length)
+      : (contacts.length + " 位客户");
+
+    if (!list.length) {
+      contactList.innerHTML =
+        '<div class="empty">' +
+        (q ? "没有匹配的客户" : "暂无客户对话") +
+        "</div>";
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+
+    list.forEach((c) => {
+      const el = document.createElement("div");
+      el.className = "contact" + (c.unread_count > 0 ? " unread" : "");
+      el.dataset.id = c.session_id;
+
+      const sub = subtitleOf(c);
+      const cnt = c.unread_count || 0;
+      const tag = tagOf(c);
+
+      el.innerHTML =
+        '<div class="' + avatarClass(c) + '">' + esc(avatarChar(c)) + "</div>" +
+        '<div class="contact-main">' +
+          '<div class="contact-row1">' +
+            '<div class="contact-name">' + esc(displayName(c)) + "</div>" +
+            (tag ? '<span class="pill-tag">' + esc(tag) + "</span>" : "") +
+            (c.human_mode ? '<span class="pill-human">人工</span>' : "") +
+            '<div class="contact-time">' + esc(fmtTime(c.updated_at)) + "</div>" +
+          "</div>" +
+          '<div class="contact-row2">' +
+            '<div class="contact-preview">' +
+              (sub ? esc(sub) + " · " : "") +
+              esc((c.last_message || "").slice(0, 60)) +
+            "</div>" +
+            (cnt ? '<div class="badge-unread" aria-label="' + cnt + ' 条未读消息">' + (cnt > 99 ? "99+" : cnt) + "</div>" : "") +
+          "</div>" +
+        "</div>" +
+        '<button class="editbtn" aria-label="编辑联系人">✎</button>';
+
+      el.addEventListener("click", (ev) => {
+        if (ev.target.closest(".editbtn")) return; // 编辑按钮单独处理
+        openChat(c.session_id);
+      });
+      el.querySelector(".editbtn").addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        openEdit(c.session_id);
+      });
+      frag.appendChild(el);
+    });
+
+    contactList.innerHTML = "";
+    contactList.appendChild(frag);
+  }
+
+  async function loadContacts(silent) {
+    try {
+      const data = await api("/api/contacts");
+      contacts = sortContactsByChatTime((data && data.contacts) || []);
+      renderContacts();
+    } catch (e) {
+      if (!silent) {
+        contactList.innerHTML =
+          '<div class="empty">加载失败：' + esc(e.message) + "</div>";
+      }
+    }
+  }
+
+  // ---------- 单条消息 ----------
+  function msgEl(m) {
+    const role = m.role || "assistant";
+    const isOut = (role === "user");      // 客户发来的 → 右侧绿泡
+    const isAgent = (role === "agent");   // 客服代发 → 左侧黄泡
+
+    const wrap = document.createElement("div");
+    wrap.className = "msg" + (isOut ? " out" : "") + (isAgent ? " agent" : "");
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    let body = linkify(m.content || "");
+
+    // 客户消息带中文翻译时，在气泡内补一块中文
+    const zh = m.content_zh;
+    const en = m.content_en;
+    if (m.translated && zh && zh !== (m.content || "")) {
+      bubble.innerHTML =
+        body +
+        '<div class="trans-zh"><span class="trans-tag">中文</span>' +
+        linkify(zh) + "</div>";
+    } else {
+      bubble.innerHTML = body;
+    }
+
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.textContent = fmtMsgTime(m.at) + (isAgent ? " 客服" : "");
+    bubble.appendChild(meta);
+
+    wrap.appendChild(bubble);
+    return wrap;
+  }
+
+  function renderMessages(rawHistory) {
+    // 过滤后台记账（role=system，如导入时批量写入的「[图片] 已保存: 媒体/...」）：
+    // 它们不是客户对话，且时间戳是导入时刻，混在对话里会造成日期错乱
+    const history = (rawHistory || []).filter((m) => m && m.role !== "system");
+    msgList.innerHTML = "";
+
+    if (!history.length) {
+      const d = document.createElement("div");
+      d.className = "empty";
+      d.textContent = "还没有消息";
+      msgList.appendChild(d);
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+    let lastDay = null;
+
+    history.forEach((m) => {
+      const k = dayKey(m.at);
+      if (k && k !== lastDay) {
+        const sep = document.createElement("div");
+        sep.className = "daysep";
+        sep.textContent = dayLabel(m.at);
+        frag.appendChild(sep);
+        lastDay = k;
+      }
+      frag.appendChild(msgEl(m));
+    });
+
+    msgList.appendChild(frag);
+    scrollToBottom(false);
+  }
+
+  function scrollToBottom(smooth) {
+    requestAnimationFrame(() => {
+      chatScroll.scrollTo({
+        top: chatScroll.scrollHeight,
+        behavior: smooth ? "smooth" : "auto"
+      });
+    });
+  }
+
+  function sysNote(text) {
+    const d = document.createElement("div");
+    d.className = "sysnote";
+    d.textContent = text;
+    msgList.appendChild(d);
+    scrollToBottom(true);
+  }
+
+  function showTyping(on) {
+    const id = "typingRow";
+    const old = document.getElementById(id);
+    if (old) old.remove();
+    if (!on) return;
+    const d = document.createElement("div");
+    d.id = id;
+    d.className = "msg";
+    d.innerHTML = '<div class="bubble"><div class="typing">' +
+                  "<span></span><span></span><span></span></div></div>";
+    msgList.appendChild(d);
+    scrollToBottom(true);
+  }
+
+  // ---------- 模式 UI ----------
+  function applyMode(c) {
+    const human = !!(c && c.human_mode);
+    modeBar.classList.toggle("human", human);
+    modeText.textContent = human
+      ? "人工接管中 · 机器人已暂停"
+      : "机器人正在接待";
+    btnToggle.textContent = human ? "🙋" : "🤖";
+    btnToggle.title = human ? "交还机器人" : "接管对话";
+    inputEl.placeholder = human ? "以客服身份回复…" : "机器人已代答，也可手动回复…";
+  }
+
+  function applyPeerHeader(c) {
+    peerAvatar.textContent = avatarChar(c);
+    peerAvatar.className = avatarClass(c);
+    peerName.textContent = displayName(c);
+    peerSub.textContent = subtitleOf(c) || (c.whatsapp_phone || c.session_id);
+  }
+
+  // ---------- 打开对话 ----------
+  async function openChat(sessionId) {
+    selectedId = sessionId;
+    closeTplPop();   // 切会话时收起模板弹层
+    const basic = contacts.find((c) => c.session_id === sessionId);
+    if (basic) {
+      selectedContact = basic;
+      applyPeerHeader(basic);
+      applyMode(basic);
+    }
+
+    viewChat.classList.add("open");
+    viewList.classList.add("pushed");
+    msgList.innerHTML = '<div class="spinner"></div>';
+
+    try {
+      const data = await api("/api/session/" + encodeURIComponent(sessionId));
+      selectedContact = data;
+      applyPeerHeader(data);
+      applyMode(data);
+      renderMessages(data.history);
+      await markSelectedRead(sessionId);
+    } catch (e) {
+      msgList.innerHTML = '<div class="empty">加载失败：' + esc(e.message) + "</div>";
+    }
+  }
+
+  async function markSelectedRead(sessionId) {
+    if (selectedId !== sessionId) return;
+    try {
+      await api("/api/contacts/" + encodeURIComponent(sessionId) + "/read", { method: "POST" });
+      const item = contacts.find((c) => c.session_id === sessionId);
+      if (item) {
+        item.unread_count = 0;
+        renderContacts();
+      }
+    } catch { /* keep the conversation usable if the read-state request is delayed */ }
+  }
+
+  // ---------- 视图切换 ----------
+  // 统一收口，避免任何路径下出现"多张视图同时可见"
+  function closeEdit() {
+    viewEdit.classList.remove("open");
+    viewChat.classList.remove("pushed");
+    editingId = null;
+  }
+
+  function closeChat() {
+    closeEdit();                     // 关对话时必须同时关掉编辑页
+    closeTplPop();                   // 收起模板弹层
+    viewChat.classList.remove("open");
+    viewList.classList.remove("pushed");
+    selectedId = null;
+    showTyping(false);
+    loadContacts(true);
+  }
+
+  // 回到首屏（客户列表）：确保三张视图都归位
+  function resetViews() {
+    closeTplPop();
+    viewEdit.classList.remove("open");
+    viewChat.classList.remove("open");
+    viewChat.classList.remove("pushed");
+    viewList.classList.remove("pushed");
+    editingId = null;
+    selectedId = null;
+    selectedContact = null;
+    showTyping(false);
+  }
+
+  // ---------- 发送 ----------
+  async function send() {
+    const text = inputEl.value.trim();
+    if (!text || !selectedId || sending) return;
+
+    sending = true;
+    btnSend.disabled = true;
+
+    // 乐观上屏
+    msgList.appendChild(msgEl({
+      role: "agent", content: text, at: new Date().toISOString()
+    }));
+    inputEl.value = "";
+    autoGrow();
+    closeTplPop();
+    scrollToBottom(true);
+
+    try {
+      const data = await api(
+        "/api/contacts/" + encodeURIComponent(selectedId) + "/agent-message",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, agent_name: "客服" })
+        }
+      );
+
+      selectedContact = data;
+      applyMode(data);
+      if (data.history) renderMessages(data.history);
+
+      // 交付 / 学习反馈
+      const d = data.delivery;
+      if (d && d.type === "catalog") {
+        if (d.sent) {
+          sysNote("已向客户发送商品目录：" + ((d.items || []).join("、") || ""));
+          toast("商品目录已发送");
+        } else {
+          sysNote("目录未发出：" + (d.error || d.note || "未知错误"));
+          toast("目录发送失败");
+        }
+      } else if (data.learned && data.learned.saved) {
+        sysNote("已发送 · 话术已自动收录");
+      } else if (d && !d.sent && d.note) {
+        sysNote("已记录 · " + d.note);
+      } else if (d && !d.sent && d.error) {
+        sysNote("发送失败：" + d.error);
+      }
+
+      loadContacts(true);
+    } catch (e) {
+      toast("发送失败：" + e.message, 3600);
+      renderMessages(selectedContact && selectedContact.history);
+    } finally {
+      sending = false;
+      btnSend.disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  // ---------- 接管开关 ----------
+  async function toggleHuman() {
+    if (!selectedId || !selectedContact) return;
+    const want = !selectedContact.human_mode;
+    btnToggle.disabled = true;
+    try {
+      const data = await api(
+        "/api/contacts/" + encodeURIComponent(selectedId) + "/human-mode",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: want })
+        }
+      );
+      selectedContact = data;
+      applyMode(data);
+      sysNote(want ? "已接管，机器人暂停自动回复" : "已交还机器人，恢复自动回复");
+      toast(want ? "已接管对话" : "已交还机器人");
+      loadContacts(true);
+    } catch (e) {
+      toast("操作失败：" + e.message);
+    } finally {
+      btnToggle.disabled = false;
+    }
+  }
+
+  // ---------- 编辑联系人 ----------
+  // 拆全名为 {first, last}：
+  // "John Smith" → first=John last=Smith
+  // "Mary Ann Lee" → first="Mary Ann" last=Lee
+  // 单词/中文名 → 全放 first，last 空
+  function splitName(full) {
+    const s = (full || "").trim().replace(/\s+/g, " ");
+    if (!s) return { first: "", last: "" };
+    // A phone number is a contact identifier, not a value for either name field.
+    const digits = (s.match(/\d/g) || []).length;
+    if (/^\+?[\d\s().-]+$/.test(s) && (digits >= 7 || /^\d{4}$/.test(s))) {
+      return { first: "", last: "" };
+    }
+    if (s.indexOf(" ") === -1) return { first: s, last: "" };
+    const parts = s.split(" ");
+    const last = parts.pop();
+    return { first: parts.join(" "), last: last };
+  }
+
+  // 手机号尾4位（姓名都没有时的显示名兜底）
+  function phoneTail(c) {
+    const dig = String(c.whatsapp_phone || c.name || "").replace(/\D/g, "");
+    return dig ? dig.slice(-4) : "";
+  }
+
+  // 组合显示名：标签 + 姓（首选）；姓空用名；姓名都空用尾4位
+  function composeName(tag, first, last, tail) {
+    const t = (tag || "").trim();
+    const f = (first || "").trim();
+    const l = (last || "").trim();
+    const person = l || f || (tail ? ("#" + tail) : "");
+    if (t && person) return t + " " + person;
+    return t || person || "";
+  }
+
+  function updatePreview() {
+    const c = editingId ? findContact(editingId) : null;
+    const tag = $("editTag").value.trim();
+    const first = $("editFirst").value.trim();
+    const last = $("editLast").value.trim();
+    const tail = c ? phoneTail(c) : "";
+    const name = composeName(tag, first, last, tail);
+
+    $("pvName").textContent = name || "（未填写）";
+    const pv = $("pvAvatar");
+    if (last) pv.textContent = last[0].toUpperCase();
+    else if (first) pv.textContent = first[0].toUpperCase();
+    else if (c) pv.textContent = avatarChar(c);
+    else pv.textContent = "?";
+  }
+
+  function findContact(sessionId) {
+    return contacts.find((c) => c.session_id === sessionId) || null;
+  }
+
+  function toDatetimeLocal(value) {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    const z = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()) +
+      "T" + z(d.getHours()) + ":" + z(d.getMinutes());
+  }
+
+  function openEdit(sessionId) {
+    editingId = sessionId;
+    const c = findContact(sessionId);
+    if (!c) { toast("找不到该联系人"); return; }
+    // 头部信息
+    $("editAvatar").textContent = avatarChar(c);
+    $("editAvatar").className = avatarClass(c);
+    $("editPhone").textContent = c.whatsapp_phone || c.name || sessionId;
+    const waName = (c.whatsapp_profile_name || "").trim();
+    $("editWaName").textContent = "WhatsApp 资料：" + (waName || "未提供");
+
+    // 默认值：姓名优先从 WhatsApp 资料拆，没有再试个人姓名/手工名
+    const src = waName || (c.personal_name || "").trim() ||
+                (c.name_manual ? (c.name || "").trim() : "");
+    let sp = splitName(src);
+
+    // 手工显示名已经是「标签 + 姓名」时，尝试把标签剥掉再拆
+    const tag = tagOf(c);
+    if (c.name_manual && c.name && tag && c.name.startsWith(tag)) {
+      sp = splitName(c.name.slice(tag.length).trim());
+    }
+
+    $("editTag").value = tag;
+    $("editFirst").value = sp.first;
+    $("editLast").value = sp.last;
+    $("editPriority").value = c.lead_temperature || "cold";
+    $("editNextAction").value = c.next_action || "";
+    $("editFollowUpDue").value = toDatetimeLocal(c.follow_up_due_at);
+    $("editPriority").dataset.dirty = "";
+    $("editNextAction").dataset.dirty = "";
+    $("editFollowUpDue").dataset.dirty = "";
+
+    viewEdit.classList.add("open");
+    viewChat.classList.add("pushed");
+    updatePreview();
+  }
+
+  async function saveEdit() {
+    if (!editingId || savingEdit) return;
+    const tag = $("editTag").value.trim();
+    const first = $("editFirst").value.trim();
+    const last = $("editLast").value.trim();
+    const c = findContact(editingId);
+    const tail = c ? phoneTail(c) : "";
+    const name = composeName(tag, first, last, tail);
+
+    if (!name) {
+      toast("请至少填标签或姓名");
+      return;
+    }
+
+    savingEdit = true;
+    const btn = $("btnSaveEdit");
+    btn.disabled = true;
+    btn.textContent = "保存中…";
+
+    try {
+      const payload = {
+        name: name,
+        tags: tag ? [tag] : []
+      };
+      if ($("editPriority").dataset.dirty) {
+        payload.lead_temperature = $("editPriority").value;
+        payload.lead_temperature_auto = false;
+      }
+      if ($("editNextAction").dataset.dirty) {
+        payload.next_action = $("editNextAction").value.trim();
+        payload.next_action_auto = false;
+      }
+      if ($("editFollowUpDue").dataset.dirty) {
+        const due = $("editFollowUpDue").value;
+        payload.follow_up_due_at = due ? new Date(due).toISOString() : "";
+        payload.follow_up_due_auto = false;
+      }
+
+      const data = await api(
+        "/api/contacts/" + encodeURIComponent(editingId),
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      // 用服务端返回的最新数据刷新本地
+      // PATCH 返回的是联系人视图（无 history），与原会话视图合并保留聊天记录
+      const idx = contacts.findIndex((x) => x.session_id === editingId);
+      if (idx >= 0) contacts[idx] = data;
+      else contacts.push(data);
+      if (selectedId === editingId) {
+        selectedContact = Object.assign({}, selectedContact || {}, data);
+        applyPeerHeader(selectedContact);
+      }
+      renderContacts();
+      closeEdit();
+      toast("已保存：" + displayName(data));
+    } catch (e) {
+      toast("保存失败：" + e.message, 3600);
+    } finally {
+      savingEdit = false;
+      btn.disabled = false;
+      btn.textContent = "保存联系人与 CRM";
+    }
+  }
+
+  // ---------- 中文语音输入 → 英文草稿 ----------
+  function setMicState(state) {
+    recognizing = state === "recording";
+    translatingVoice = state === "translating";
+    btnMic.classList.toggle("recording", recognizing);
+    btnMic.disabled = translatingVoice;
+    btnMic.textContent = recognizing ? "■" : (translatingVoice ? "…" : "🎙");
+    btnMic.setAttribute("aria-label", recognizing ? "停止录音" : "中文语音输入");
+  }
+
+  async function translateVoiceDraft(chinese) {
+    if (!chinese) return;
+    setMicState("translating");
+    toast("正在翻译成英文…", 5000);
+    try {
+      const data = await api("/api/translate/zh-en", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: chinese })
+      });
+      inputEl.value = data.translation || "";
+      autoGrow();
+      inputEl.focus();
+      try { inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); } catch (e) {}
+      toast("英文已填入，请确认后发送", 3200);
+    } catch (e) {
+      toast("语音翻译失败：" + e.message, 4200);
+    } finally {
+      setMicState("idle");
+    }
+  }
+
+  function startVoiceInput() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      toast("当前浏览器不支持语音识别，请使用最新版 Chrome 或 Safari", 4200);
+      return;
+    }
+    if (recognizing && speechRecognition) {
+      speechRecognition.stop();
+      return;
+    }
+    if (translatingVoice) return;
+
+    const recognition = new Recognition();
+    speechRecognition = recognition;
+    recognition.lang = "zh-CN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => {
+      setMicState("recording");
+      toast("请说中文，再点一次可结束", 5000);
+    };
+    recognition.onresult = (event) => {
+      const spoken = event.results && event.results[0] && event.results[0][0]
+        ? event.results[0][0].transcript.trim() : "";
+      if (spoken) translateVoiceDraft(spoken);
+      else toast("没有识别到语音，请重试");
+    };
+    recognition.onerror = (event) => {
+      setMicState("idle");
+      const denied = event.error === "not-allowed" || event.error === "service-not-allowed";
+      toast(denied ? "请允许浏览器使用麦克风" : "语音识别失败，请重试", 3600);
+    };
+    recognition.onend = () => {
+      speechRecognition = null;
+      if (!translatingVoice) setMicState("idle");
+    };
+    try { recognition.start(); }
+    catch (e) { setMicState("idle"); toast("无法启动语音输入，请重试"); }
+  }
+
+  // ---------- 斜杠模板选择器 ----------
+  // 规则：输入框内容以 "/" 开头时弹出；继续输入则按名称过滤。
+  // 选中后保留 "/xxx" 命令，发送时由后端调用对应的 WhatsApp Content SID。
+  function slashQuery() {
+    const v = inputEl.value;
+    const m = v.match(/^\s*\/([^\s]*)$/);
+    return m ? m[1] : null;
+  }
+
+  function renderTplList() {
+    const q = (slashQuery() || "").toLowerCase();
+    tplMatches = SLASH_TEMPLATES.filter((t) =>
+      !q || t.key.toLowerCase().indexOf(q) !== -1 ||
+      t.name.toLowerCase().indexOf(q) !== -1
+    );
+
+    if (tplActiveIdx >= tplMatches.length) tplActiveIdx = 0;
+
+    if (!tplMatches.length) {
+      tplList.innerHTML = '<div class="tpl-empty">没有匹配的模板</div>';
+      return;
+    }
+
+    tplList.innerHTML = "";
+    tplMatches.forEach((t, i) => {
+      const el = document.createElement("div");
+      el.className = "tpl-item" + (i === tplActiveIdx ? " active" : "");
+      el.innerHTML =
+        '<span class="tpl-name">' + esc(t.name) + "</span>" +
+        '<span class="tpl-desc">' + esc(t.desc) + "</span>";
+      el.addEventListener("mousedown", (ev) => { ev.preventDefault(); });
+      el.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        insertTemplate(t);
+      });
+      el.addEventListener("touchstart", (ev) => { ev.preventDefault(); insertTemplate(t); }, { passive: false });
+      tplList.appendChild(el);
+    });
+  }
+
+  function openTplPop() {
+    tplOpen = true;
+    tplActiveIdx = 0;
+    tplPop.classList.add("show");
+    renderTplList();
+  }
+
+  function closeTplPop() {
+    if (!tplOpen) return;
+    tplOpen = false;
+    tplPop.classList.remove("show");
+    tplList.innerHTML = "";
+    tplMatches = [];
+  }
+
+  // 输入内容变化时决定弹出/关闭/过滤
+  function syncTplPop() {
+    if (!selectedId) { closeTplPop(); return; }
+    const q = slashQuery();
+    if (q === null) { closeTplPop(); return; }
+    if (!tplOpen) openTplPop();
+    else renderTplList();
+  }
+
+  function insertTemplate(t) {
+    // 只提交斜杠命令，让后端按模板 SID 发送真实 WhatsApp Card。
+    // 不能把模板正文插入输入框，否则会被当作普通文本发送。
+    inputEl.value = "/" + t.key;
+    closeTplPop();
+    autoGrow();
+    inputEl.focus();
+    // 光标移到末尾，方便直接接着写
+    try {
+      inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+    } catch (e) {}
+    toast("已选择模板：" + t.name + "，确认后发送");
+  }
+
+  function moveTplActive(delta) {
+    if (!tplMatches.length) return;
+    tplActiveIdx = (tplActiveIdx + delta + tplMatches.length) % tplMatches.length;
+    renderTplList();
+    const act = tplList.querySelector(".tpl-item.active");
+    if (act && act.scrollIntoView) act.scrollIntoView({ block: "nearest" });
+  }
+
+  // ---------- 输入框自适应高度 ----------
+  function autoGrow() {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+  }
+
+  // ---------- 事件绑定 ----------
+  searchEl.addEventListener("input", () => {
+    filterText = searchEl.value;
+    renderContacts();
+  });
+
+  $("btnRefresh").addEventListener("click", async () => {
+    const b = $("btnRefresh");
+    b.style.transform = "rotate(360deg)";
+    b.style.transition = "transform .5s";
+    setTimeout(() => { b.style.transform = ""; b.style.transition = ""; }, 520);
+    await loadContacts();
+    if (selectedId) await openChat(selectedId);
+    toast("已刷新");
+  });
+
+  $("btnCrm").addEventListener("click", () => { location.href = "/m/crm/home"; });
+  $("btnBack").addEventListener("click", closeChat);
+  btnToggle.addEventListener("click", toggleHuman);
+
+  // 编辑页入口：对话页头部点击 / 编辑页返回 / 保存 / 输入实时预览
+  peerHead.addEventListener("click", () => {
+    if (selectedId) openEdit(selectedId);
+  });
+  $("btnEditBack").addEventListener("click", closeEdit);
+  $("btnSaveEdit").addEventListener("click", saveEdit);
+  $("editPriority").addEventListener("change", () => { $("editPriority").dataset.dirty = "1"; });
+  ["editTag", "editFirst", "editLast"].forEach((id) => {
+    $(id).addEventListener("input", updatePreview);
+  });
+  ["editNextAction", "editFollowUpDue"].forEach((id) => {
+    $(id).addEventListener("input", () => { $(id).dataset.dirty = "1"; });
+  });
+
+  composer.addEventListener("submit", (e) => {
+    e.preventDefault();
+    send();
+  });
+  btnMic.addEventListener("click", startVoiceInput);
+
+  inputEl.addEventListener("input", () => {
+    autoGrow();
+    syncTplPop();
+  });
+
+  // 回车发送（Shift+Enter 换行）；手机上保持回车换行更自然，所以只在非触摸环境下生效
+  inputEl.addEventListener("keydown", (e) => {
+    // 模板弹层打开时，方向键选择、回车/Tab 插入、Esc 关闭
+    if (tplOpen) {
+      if (e.key === "ArrowDown") { e.preventDefault(); moveTplActive(1); return; }
+      if (e.key === "ArrowUp")   { e.preventDefault(); moveTplActive(-1); return; }
+      if (e.key === "Escape")    { e.preventDefault(); closeTplPop(); return; }
+      if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey) {
+        if (tplMatches[tplActiveIdx]) {
+          e.preventDefault();
+          insertTemplate(tplMatches[tplActiveIdx]);
+          return;
+        }
+      }
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      const isTouch = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+      if (!isTouch) {
+        e.preventDefault();
+        send();
+      }
+    }
+  });
+
+  // 点击输入框以外的地方关闭弹层
+  document.addEventListener("click", (e) => {
+    if (!tplOpen) return;
+    if (tplPop.contains(e.target) || e.target === inputEl) return;
+    closeTplPop();
+  });
+
+  // 键盘弹出时把聊天区顶上去
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => {
+      scrollToBottom(false);
+    });
+  }
+
+  // 返回键（部分安卓/浏览器）：编辑页 → 对话页 → 列表
+  window.addEventListener("popstate", () => {
+    if (viewEdit.classList.contains("open")) {
+      closeEdit();
+      history.pushState(null, "");
+      return;
+    }
+    if (viewChat.classList.contains("open")) { closeChat(); history.pushState(null, ""); }
+  });
+  history.pushState(null, "");
+
+  // 从后台切回来时刷新列表（保持静默，避免打断）
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    loadContacts(true);
+    if (selectedId) openChat(selectedId);
+  });
+
+  setInterval(async () => {
+    if (document.hidden) return;
+    if (!selectedId) {
+      await loadContacts(true);
+      return;
+    }
+    try {
+      const data = await api("/api/session/" + encodeURIComponent(selectedId));
+      const oldHistory = selectedContact && selectedContact.history;
+      if (!oldHistory || JSON.stringify(oldHistory) !== JSON.stringify(data.history)) {
+        if (selectedContact) selectedContact.history = data.history;
+        renderMessages(data.history);
+        await markSelectedRead(selectedId);
+      }
+    } catch (e) { /* 下次轮询重试 */ }
+  }, 5000);
+
+  // 浏览器前进/后退回到本页（含 bfcache 恢复）时，强制回到客户列表首屏，
+  // 避免带着上次的 .open 状态直接落在"编辑联系人"界面。
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted || !viewList.classList.contains("pushed")) {
+      resetViews();
+      loadContacts(true);
+    }
+  });
+
+  // ---------- 启动 ----------
+  resetViews();   // 首屏必须是客户列表，绝不允许直接落在编辑页
+  autoGrow();
+  loadContacts().then(() => {
+    const requestedSession = new URLSearchParams(location.search).get("session");
+    if (requestedSession) openChat(requestedSession);
+  });
+})();
+</script>
+</body>
+</html>

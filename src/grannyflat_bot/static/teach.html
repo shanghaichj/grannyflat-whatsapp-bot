@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>教模型 · 话术与知识库</title>
+  <style>
+    :root {
+      --wa-green: #00a884;
+      --wa-green-dark: #008069;
+      --wa-green-deep: #005c4b;
+      --wa-bg: #f0f2f5;
+      --wa-panel: #ffffff;
+      --wa-chat-bg: #efeae2;
+      --wa-text: #111b21;
+      --wa-muted: #667781;
+      --wa-border: #e9edef;
+      --wa-hover: #f5f6f6;
+      --wa-bubble-out: #d9fdd3;
+      --wa-bubble-in: #ffffff;
+      --wa-shadow: 0 1px 3px rgba(11, 20, 26, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      min-height: 100vh;
+      background: var(--wa-bg);
+      color: var(--wa-text);
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      padding: 52px 0 0 68px;
+      box-sizing: border-box;
+    }
+    .app-rail {
+      position: fixed; inset: 0 auto 0 0; width: 68px; z-index: 1200;
+      background: linear-gradient(180deg, #0b493a, #07372d); color: #fff;
+      display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 13px 0;
+    }
+    .app-rail a { text-decoration: none; }
+    .app-rail-logo { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: #fff; color: #0d4b3c; font-weight: 900; margin-bottom: 13px; }
+    .app-rail-link { width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center; color: #cce5dc; font-size: 12px; font-weight: 750; position: relative; }
+    .app-rail-link:hover, .app-rail-link.active { background: rgba(255,255,255,.16); color: #fff; }
+    .app-rail-link.active::before { content: ""; position: absolute; left: -12px; top: 9px; width: 3px; height: 26px; border-radius: 3px; background: #79d7b7; }
+    .app-rail-bottom { margin-top: auto; }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      padding: 0.7rem 1.1rem; border-bottom: 1px solid var(--wa-border); background: var(--wa-panel);
+      min-height: 52px;
+      position: fixed;
+      top: 0;
+      left: 68px;
+      right: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(11, 20, 26, 0.08);
+    }
+    header h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+    header a, header button.linkish {
+      color: var(--wa-green-dark); font-size: 0.88rem; text-decoration: none;
+      background: none; border: 0; cursor: pointer; font: inherit; font-weight: 600;
+    }
+    header a:hover, header button.linkish:hover { color: var(--wa-green-deep); }
+    .layout { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 52px); }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; height: auto; } .sidebar { max-height: 36vh; } }
+    .sidebar {
+      border-right: 1px solid var(--wa-border); background: var(--wa-panel);
+      overflow: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .mode-tabs { display: flex; gap: 0.35rem; }
+    .mode-tab {
+      flex: 1; border: 1px solid var(--wa-border); background: var(--wa-bg); color: var(--wa-muted);
+      border-radius: 8px; padding: 0.45rem 0.5rem; font: inherit; font-size: 0.84rem; cursor: pointer;
+    }
+    .mode-tab.active {
+      border-color: #cdecd6; color: var(--wa-green-deep); background: #e7fce3; font-weight: 700;
+    }
+    .hint { font-size: 0.84rem; color: var(--wa-muted); line-height: 1.45; margin: 0; }
+    .group-title {
+      margin: 0.75rem 0 0.4rem; font-size: 0.75rem; color: var(--wa-green-dark);
+      letter-spacing: 0.04em; font-weight: 700;
+    }
+    .file {
+      display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent;
+      color: var(--wa-text); border-radius: 8px; padding: 0.55rem 0.65rem; margin-bottom: 0.25rem;
+      cursor: pointer; font: inherit; font-size: 0.9rem;
+    }
+    .file:hover { background: var(--wa-hover); }
+    .file.active { border-color: var(--wa-border); background: #e7fce3; }
+    .file small { display: block; color: var(--wa-muted); font-size: 0.72rem; margin-top: 0.15rem; }
+    .main-panel { display: flex; flex-direction: column; min-height: 0; background: var(--wa-chat-bg); }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+      padding: 0.7rem 1rem; border-bottom: 1px solid var(--wa-border); background: var(--wa-panel);
+    }
+    .toolbar .title { font-weight: 600; flex: 1; }
+    .btn {
+      border: 0; border-radius: 8px; padding: 0.45rem 0.85rem; font: inherit;
+      font-weight: 600; cursor: pointer; font-size: 0.86rem;
+    }
+    .btn-gold { background: var(--wa-green); color: #fff; }
+    .btn-gold:hover { background: var(--wa-green-dark); }
+    .btn-ghost {
+      background: transparent; border: 1px solid var(--wa-border); color: var(--wa-muted);
+    }
+    .btn-ghost:hover { background: var(--wa-hover); color: var(--wa-text); }
+    #panel-edit { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .editor-wrap {
+      flex: 1; display: flex; flex-direction: column; min-height: 0; background: #fff;
+    }
+    .format-toolbar {
+      display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center;
+      padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--wa-border);
+      background: #f8faf9; font-size: 0.82rem;
+    }
+    .format-toolbar label {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      color: var(--wa-muted); font-weight: 600;
+    }
+    .format-toolbar input[type="color"] {
+      width: 2rem; height: 1.65rem; padding: 0; border: 1px solid var(--wa-border);
+      border-radius: 6px; cursor: pointer; background: #fff;
+    }
+    .fmt-btn {
+      border: 1px solid var(--wa-border); background: #fff; color: var(--wa-text);
+      border-radius: 6px; padding: 0.28rem 0.55rem; font: inherit; font-size: 0.8rem;
+      cursor: pointer; font-weight: 600;
+    }
+    .fmt-btn:hover { background: var(--wa-hover); }
+    .fmt-btn.active { border-color: #cdecd6; background: #e7fce3; color: var(--wa-green-deep); }
+    .fmt-sep { width: 1px; height: 1.25rem; background: var(--wa-border); margin: 0 0.15rem; }
+    #content {
+      flex: 1; width: 100%; border: 0; resize: none; padding: 1rem;
+      background: #fff; color: var(--wa-text);
+      font-family: Consolas, "Cascadia Code", monospace; font-size: 0.9rem; line-height: 1.5;
+    }
+    #content:focus { outline: none; }
+    #rich-editor {
+      flex: 1; width: 100%; border: 0; padding: 1rem;
+      background: #fff; color: var(--wa-text);
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 0.95rem; line-height: 1.55; overflow: auto; outline: none;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    #rich-editor:empty::before {
+      content: attr(data-placeholder);
+      color: #9aa5ad;
+    }
+    #preview-pane {
+      flex: 1; overflow: auto; padding: 1rem;
+      background: #fff; color: var(--wa-text);
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 0.95rem; line-height: 1.55; white-space: pre-wrap;
+    }
+    #preview-pane .preview-label {
+      font-size: 0.72rem; color: var(--wa-muted); margin-bottom: 0.5rem; font-weight: 600;
+    }
+    .status {
+      padding: 0.55rem 1rem; border-top: 1px solid var(--wa-border);
+      font-size: 0.84rem; color: var(--wa-muted); background: var(--wa-panel);
+    }
+    .status.ok { color: var(--wa-green-deep); }
+    .status.err { color: #c62828; }
+    .train-messages {
+      flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.55rem;
+      background: var(--wa-chat-bg);
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4cdc4' fill-opacity='0.35'%3E%3Cpath d='M10 10h2v2h-2zm20 0h2v2h-2zm20 0h2v2h-2zM0 30h2v2H0zm20 0h2v2h-2zm20 0h2v2h-2zm20 0h2v2h-2zM10 50h2v2h-2zm20 0h2v2h-2zm20 0h2v2h-2z'/%3E%3C/g%3E%3C/svg%3E");
+    }
+    .msg {
+      max-width: 88%; padding: 0.55rem 0.75rem; border-radius: 8px; white-space: pre-wrap;
+      line-height: 1.4; font-size: 0.95rem; box-shadow: var(--wa-shadow);
+    }
+    .msg .meta { font-size: 0.72rem; color: var(--wa-muted); margin-bottom: 0.2rem; font-weight: 500; }
+    .msg.user { align-self: flex-end; background: var(--wa-bubble-out); }
+    .msg.bot { align-self: flex-start; background: var(--wa-bubble-in); }
+    .msg-actions { margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .msg-actions button {
+      border: 1px solid #cdecd6; background: #e7fce3; color: var(--wa-green-deep);
+      border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.74rem; cursor: pointer; font-weight: 600;
+    }
+    .train-compose {
+      display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem 1rem;
+      border-top: 1px solid var(--wa-border); background: var(--wa-bg);
+    }
+    .train-compose textarea {
+      width: 100%; min-height: 56px; max-height: 120px; resize: vertical;
+      border: 0; background: #fff; color: var(--wa-text);
+      border-radius: 8px; padding: 0.65rem 0.8rem; font: inherit; box-shadow: var(--wa-shadow);
+    }
+    .train-compose .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .custom-answer { margin-top: 0.15rem; }
+    .custom-answer label {
+      font-size: 0.8rem; color: var(--wa-green-dark); display: block; margin-bottom: 0.25rem; font-weight: 600;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <nav class="app-rail" aria-label="主功能">
+    <a class="app-rail-logo" href="/crm/home" title="Aus Granny Flat">GF</a>
+    <a class="app-rail-link" href="/admin" title="客服工作台">客服</a>
+    <a class="app-rail-link" href="/crm/home" title="销售 CRM">CRM</a>
+    <a class="app-rail-link" href="/admin/old-number" title="老号码独立入口">旧号</a>
+    <a class="app-rail-link active" href="/teach" title="教模型">教学</a>
+    <a class="app-rail-link app-rail-bottom" href="/api/admin/diagnostics" title="系统诊断">诊断</a>
+  </nav>
+  <header>
+    <h1>教模型 · 提示词 + 知识库</h1>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="mode-tabs">
+        <button type="button" class="mode-tab active" data-mode="edit">编辑文档</button>
+        <button type="button" class="mode-tab" data-mode="train">话术训练</button>
+      </div>
+      <div id="sidebar-edit">
+        <p class="hint">编辑话术与知识文档。保存后补充话术立即生效；知识库自动重建检索。</p>
+        <div id="file-list"></div>
+      </div>
+      <div id="sidebar-train" class="hidden">
+        <p class="hint">
+          1. 输入<strong>模拟客户问题</strong>，看机器人试答<br>
+          2. 不满意可写<strong>标准答法</strong><br>
+          3. 点<strong>收录为话术</strong>，以后类似问题会参考
+        </p>
+        <button type="button" class="btn btn-ghost" id="btn-new-session" style="width:100%">新对话</button>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <!-- 编辑模式 -->
+      <div id="panel-edit">
+        <div class="toolbar">
+          <div class="title" id="doc-title">请选择左侧文件</div>
+          <button type="button" class="btn btn-ghost" id="btn-reload" hidden>重建知识索引</button>
+          <button type="button" class="btn btn-gold" id="btn-save" disabled>保存</button>
+        </div>
+        <div class="editor-wrap">
+          <div class="format-toolbar" id="format-toolbar" hidden>
+            <label title="文字颜色">字色 <input type="color" id="fg-color" value="#c62828" /></label>
+            <label title="背景颜色">底色 <input type="color" id="bg-color" value="#fff9c4" /></label>
+            <button type="button" class="fmt-btn" id="btn-apply-fg" title="给选中文字加颜色">加字色</button>
+            <button type="button" class="fmt-btn" id="btn-apply-bg" title="给选中文字加背景">加底色</button>
+            <button type="button" class="fmt-btn" id="btn-clear-fmt">清除格式</button>
+            <span class="fmt-sep"></span>
+            <button type="button" class="fmt-btn" id="btn-toggle-preview">预览</button>
+            <span class="hint" style="margin:0;font-size:0.75rem">选中文字后点「加字色/加底色」；.md 保存带颜色标签</span>
+          </div>
+          <div id="rich-editor" contenteditable="true" class="hidden" data-placeholder="选择左侧文件开始编辑…" spellcheck="false"></div>
+          <textarea id="content" spellcheck="false" placeholder="选择左侧文件开始编辑…" disabled></textarea>
+          <div id="preview-pane" class="hidden"></div>
+        </div>
+        <div class="status" id="status">就绪</div>
+      </div>
+
+      <!-- 话术训练 -->
+      <div id="panel-train" class="hidden" style="display:none;flex:1;flex-direction:column;min-height:0">
+        <div class="toolbar">
+          <div class="title">话术训练聊天</div>
+          <button type="button" class="btn btn-ghost" id="btn-open-learned">查看已收录</button>
+        </div>
+        <div class="train-messages" id="train-messages"></div>
+        <div class="train-compose">
+          <textarea id="train-input" placeholder="输入模拟客户问题，例如：墨尔本两房奶奶房全包多少钱？"></textarea>
+          <div class="custom-answer">
+            <label for="custom-answer">标准答法（可选，收录时用；留空则用机器人回答）</label>
+            <textarea id="custom-answer" placeholder="写你希望机器人以后使用的答法…" rows="3"></textarea>
+          </div>
+          <div class="row">
+            <button type="button" class="btn btn-gold" id="btn-send">发送 · 看机器人试答</button>
+            <button type="button" class="btn btn-ghost" id="btn-capture" disabled>收录为话术</button>
+          </div>
+        </div>
+        <div class="status" id="train-status">模拟客户提问，测试后再收录</div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const fileListEl = document.getElementById("file-list");
+    const contentEl = document.getElementById("content");
+    const richEditor = document.getElementById("rich-editor");
+    const previewPane = document.getElementById("preview-pane");
+    const formatToolbar = document.getElementById("format-toolbar");
+    const fgColor = document.getElementById("fg-color");
+    const bgColor = document.getElementById("bg-color");
+    const btnApplyFg = document.getElementById("btn-apply-fg");
+    const btnApplyBg = document.getElementById("btn-apply-bg");
+    const btnClearFmt = document.getElementById("btn-clear-fmt");
+    const btnTogglePreview = document.getElementById("btn-toggle-preview");
+    const titleEl = document.getElementById("doc-title");
+    const statusEl = document.getElementById("status");
+    const btnSave = document.getElementById("btn-save");
+    const btnReload = document.getElementById("btn-reload");
+    const panelEdit = document.getElementById("panel-edit");
+    const panelTrain = document.getElementById("panel-train");
+    const sidebarEdit = document.getElementById("sidebar-edit");
+    const sidebarTrain = document.getElementById("sidebar-train");
+    const trainMessages = document.getElementById("train-messages");
+    const trainInput = document.getElementById("train-input");
+    const customAnswer = document.getElementById("custom-answer");
+    const trainStatus = document.getElementById("train-status");
+    const btnSend = document.getElementById("btn-send");
+    const btnCapture = document.getElementById("btn-capture");
+    const btnNewSession = document.getElementById("btn-new-session");
+    const btnOpenLearned = document.getElementById("btn-open-learned");
+
+    let files = [];
+    let current = null;
+    let dirty = false;
+    let mode = "edit";
+    let trainSessionId = null;
+    let lastExchange = null;
+    let richMode = false;
+    let previewMode = false;
+
+    function isRichFile(name) {
+      return /\.md$/i.test(name || "");
+    }
+
+    function sanitizeHtml(html) {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      doc.querySelectorAll("script,style,iframe,object,embed").forEach((n) => n.remove());
+      doc.querySelectorAll("*").forEach((el) => {
+        [...el.attributes].forEach((attr) => {
+          if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+        });
+      });
+      return doc.body.innerHTML;
+    }
+
+    function plainToRichHtml(text) {
+      return escapeHtml(text || "").replace(/\n/g, "<br>");
+    }
+
+    function richHtmlToPlain(html) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html || "";
+      return tmp.innerText.replace(/\u00a0/g, " ");
+    }
+
+    function loadEditorContent(text) {
+      const raw = text || "";
+      if (richMode) {
+        if (/<span\s/i.test(raw) || /<font\s/i.test(raw) || /<mark\s/i.test(raw)) {
+          richEditor.innerHTML = sanitizeHtml(raw);
+        } else {
+          richEditor.innerHTML = plainToRichHtml(raw);
+        }
+        contentEl.value = raw;
+      } else {
+        contentEl.value = raw;
+        richEditor.innerHTML = "";
+      }
+    }
+
+    function getEditorContent() {
+      if (richMode) {
+        return sanitizeHtml(richEditor.innerHTML);
+      }
+      return contentEl.value;
+    }
+
+    function setEditorMode(name) {
+      richMode = isRichFile(name);
+      previewMode = false;
+      formatToolbar.hidden = !richMode;
+      btnTogglePreview.classList.remove("active");
+      if (richMode) {
+        contentEl.classList.add("hidden");
+        richEditor.classList.remove("hidden");
+        previewPane.classList.add("hidden");
+        richEditor.contentEditable = "true";
+      } else {
+        richEditor.classList.add("hidden");
+        previewPane.classList.add("hidden");
+        contentEl.classList.remove("hidden");
+      }
+    }
+
+    function wrapSelection(styleCss) {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        setStatus("请先选中要着色的文字", "err");
+        return false;
+      }
+      const range = sel.getRangeAt(0);
+      if (!richEditor.contains(range.commonAncestorContainer)) {
+        setStatus("请在编辑区内选中文字", "err");
+        return false;
+      }
+      const span = document.createElement("span");
+      span.setAttribute("style", styleCss);
+      try {
+        range.surroundContents(span);
+      } catch {
+        const frag = range.extractContents();
+        span.appendChild(frag);
+        range.insertNode(span);
+      }
+      sel.removeAllRanges();
+      const nr = document.createRange();
+      nr.selectNodeContents(span);
+      nr.collapse(false);
+      sel.addRange(nr);
+      dirty = true;
+      setStatus("已应用格式（记得保存）");
+      return true;
+    }
+
+    function applyForeground() {
+      wrapSelection(`color:${fgColor.value}`);
+    }
+
+    function applyBackground() {
+      wrapSelection(`background-color:${bgColor.value}`);
+    }
+
+    function clearFormat() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        setStatus("请先选中要清除格式的文字", "err");
+        return;
+      }
+      document.execCommand("removeFormat", false, null);
+      dirty = true;
+      setStatus("已清除选中格式（记得保存）");
+    }
+
+    function updatePreview() {
+      previewPane.innerHTML =
+        `<div class="preview-label">预览（保存后写入文件）</div>` +
+        sanitizeHtml(richEditor.innerHTML);
+    }
+
+    function togglePreview() {
+      if (!richMode) return;
+      previewMode = !previewMode;
+      btnTogglePreview.classList.toggle("active", previewMode);
+      if (previewMode) {
+        updatePreview();
+        richEditor.classList.add("hidden");
+        previewPane.classList.remove("hidden");
+        richEditor.contentEditable = "false";
+      } else {
+        previewPane.classList.add("hidden");
+        richEditor.classList.remove("hidden");
+        richEditor.contentEditable = "true";
+      }
+    }
+
+    function authFetch(url, options = {}) {
+      return fetch(url, { credentials: "same-origin", ...options }).then((res) => {
+        if (res.status === 401) { location.href = "/admin/login"; throw new Error("login required"); }
+        return res;
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function setStatus(text, kind = "") {
+      statusEl.textContent = text;
+      statusEl.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function setTrainStatus(text, kind = "") {
+      trainStatus.textContent = text;
+      trainStatus.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function switchMode(next) {
+      mode = next;
+      document.querySelectorAll(".mode-tab").forEach((t) => {
+        t.classList.toggle("active", t.dataset.mode === next);
+      });
+      const isTrain = next === "train";
+      panelEdit.classList.toggle("hidden", isTrain);
+      panelEdit.style.display = isTrain ? "none" : "flex";
+      panelTrain.classList.toggle("hidden", !isTrain);
+      panelTrain.style.display = isTrain ? "flex" : "none";
+      sidebarEdit.classList.toggle("hidden", isTrain);
+      sidebarTrain.classList.toggle("hidden", !isTrain);
+    }
+
+    document.querySelectorAll(".mode-tab").forEach((tab) => {
+      tab.addEventListener("click", () => switchMode(tab.dataset.mode));
+    });
+
+    function renderList() {
+      const prompts = files.filter((f) => f.kind === "prompts");
+      const knowledge = files.filter((f) => f.kind === "knowledge");
+      const block = (title, rows) => {
+        if (!rows.length) return "";
+        return `<div class="group-title">${title}</div>` + rows.map((f) => {
+          const active = current && current.kind === f.kind && current.name === f.name ? "active" : "";
+          return `<button type="button" class="file ${active}" data-kind="${f.kind}" data-name="${f.name}">
+            ${escapeHtml(f.label)}<small>${f.kind}/${f.name}</small></button>`;
+        }).join("");
+      };
+      fileListEl.innerHTML = block("补充话术", prompts) + block("知识库", knowledge);
+    }
+
+    async function loadFiles() {
+      const res = await authFetch("/api/teach/files");
+      files = (await res.json()).files || [];
+      renderList();
+      if (!current) {
+        const prefer =
+          files.find((f) => f.name === "guided_intake.yaml") ||
+          files.find((f) => f.name === "extra_instructions.md") ||
+          files[0];
+        if (prefer) await openFile(prefer.kind, prefer.name);
+      }
+    }
+
+    async function openFile(kind, name) {
+      if (dirty && !confirm("当前修改未保存，确定切换？")) return;
+      const res = await authFetch(`/api/teach/files/${encodeURIComponent(kind)}/${encodeURIComponent(name)}`);
+      if (!res.ok) { setStatus("读取失败", "err"); return; }
+      current = await res.json();
+      titleEl.textContent = current.label || current.name;
+      setEditorMode(current.name);
+      loadEditorContent(current.content || "");
+      contentEl.disabled = false;
+      richEditor.contentEditable = richMode ? "true" : "false";
+      btnSave.disabled = false;
+      btnReload.hidden = false;
+      dirty = false;
+      renderList();
+      setStatus(`已打开 ${current.kind}/${current.name}${richMode ? "（可视化编辑）" : ""}`);
+    }
+
+    async function saveFile() {
+      if (!current) return;
+      btnSave.disabled = true;
+      setStatus("保存中…");
+      try {
+        const payload = getEditorContent();
+        const res = await authFetch(
+          `/api/teach/files/${encodeURIComponent(current.kind)}/${encodeURIComponent(current.name)}`,
+          { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: payload }) }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = typeof data.detail === "string"
+            ? data.detail
+            : (Array.isArray(data.detail) ? data.detail.map((d) => d.msg || JSON.stringify(d)).join("; ") : "");
+          setStatus(detail || `保存失败（HTTP ${res.status}）`, "err");
+          return;
+        }
+        current = data;
+        dirty = false;
+        loadEditorContent(payload);
+        const chunks = data.reloaded && data.reloaded.chunks;
+        setStatus(chunks != null ? `已保存，知识索引已重建（${chunks} 个片段）` : "已保存", "ok");
+        await loadFiles();
+      } finally { btnSave.disabled = false; }
+    }
+
+    function appendTrainMsg(role, text, meta) {
+      const div = document.createElement("div");
+      div.className = `msg ${role}`;
+      div.innerHTML = `<div class="meta">${escapeHtml(meta)}</div>${escapeHtml(text)}`;
+      trainMessages.appendChild(div);
+      trainMessages.scrollTop = trainMessages.scrollHeight;
+      return div;
+    }
+
+    async function sendPractice() {
+      const message = trainInput.value.trim();
+      if (!message) return;
+      btnSend.disabled = true;
+      setTrainStatus("机器人思考中…");
+      appendTrainMsg("user", message, "模拟客户");
+      trainInput.value = "";
+      try {
+        const res = await authFetch("/api/teach/practice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, session_id: trainSessionId, locale: "bilingual" }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setTrainStatus(data.detail || "试答失败", "err");
+          return;
+        }
+        trainSessionId = data.session_id;
+        lastExchange = { question: data.question || message, answer: data.reply || "" };
+        const botEl = appendTrainMsg("bot", data.reply || "(无回复)", "机器人试答");
+        const actions = document.createElement("div");
+        actions.className = "msg-actions";
+        actions.innerHTML = `<button type="button" class="capture-bot">收录此回答</button>`;
+        botEl.appendChild(actions);
+        actions.querySelector(".capture-bot").addEventListener("click", () => captureScript(lastExchange.question, lastExchange.answer));
+        customAnswer.value = data.reply || "";
+        btnCapture.disabled = false;
+        setTrainStatus("可修改标准答法后点「收录为话术」", "ok");
+      } finally { btnSend.disabled = false; }
+    }
+
+    async function captureScript(question, answer) {
+      const q = (question || "").trim();
+      const a = (customAnswer.value.trim() || answer || "").trim();
+      if (!q || !a) { setTrainStatus("问题和答法都不能为空", "err"); return; }
+      btnCapture.disabled = true;
+      setTrainStatus("收录中…");
+      try {
+        const res = await authFetch("/api/teach/capture", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: q, answer: a }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { setTrainStatus(data.detail || "收录失败", "err"); return; }
+        if (data.learned && data.learned.saved) {
+          setTrainStatus("已收录到「客服回复自动收录」，相似问题会参考此话术", "ok");
+          appendTrainMsg("bot", "✓ 已收录本条话术", "系统");
+        } else {
+          setTrainStatus(data.learned?.reason === "duplicate" ? "相同问题已收录过" : "未收录（可能太短或重复）", "err");
+        }
+      } finally { btnCapture.disabled = false; }
+    }
+
+    fileListEl.addEventListener("click", (e) => {
+      const btn = e.target.closest(".file");
+      if (!btn) return;
+      openFile(btn.dataset.kind, btn.dataset.name);
+    });
+    contentEl.addEventListener("input", () => { dirty = true; setStatus("有未保存修改"); });
+    richEditor.addEventListener("input", () => { dirty = true; setStatus("有未保存修改"); });
+    btnApplyFg.addEventListener("click", applyForeground);
+    btnApplyBg.addEventListener("click", applyBackground);
+    btnClearFmt.addEventListener("click", clearFormat);
+    btnTogglePreview.addEventListener("click", togglePreview);
+    btnSave.addEventListener("click", saveFile);
+    btnReload.addEventListener("click", async () => {
+      const data = await (await authFetch("/api/teach/reload", { method: "POST" })).json();
+      setStatus(data.ok ? `知识索引已重建（${data.chunks} 个片段）` : "重建失败", data.ok ? "ok" : "err");
+    });
+    btnSend.addEventListener("click", sendPractice);
+    trainInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendPractice(); }
+    });
+    btnCapture.addEventListener("click", () => {
+      if (!lastExchange) return;
+      captureScript(lastExchange.question, lastExchange.answer);
+    });
+    btnNewSession.addEventListener("click", () => {
+      trainSessionId = null;
+      lastExchange = null;
+      trainMessages.innerHTML = "";
+      customAnswer.value = "";
+      btnCapture.disabled = true;
+      setTrainStatus("已开始新对话");
+    });
+    btnOpenLearned.addEventListener("click", async () => {
+      switchMode("edit");
+      await openFile("prompts", "learned_from_agents.md");
+    });
+
+    (async function init() {
+      try {
+        const sessionRes = await fetch("/api/admin/session", { credentials: "same-origin" });
+        if (sessionRes.ok) {
+          const session = await sessionRes.json();
+          if (session.auth_required && !session.authenticated) { location.href = "/admin/login"; return; }
+        }
+      } catch { /* ignore */ }
+      panelEdit.style.display = "flex";
+      await loadFiles();
+    })();
+  </script>
+</body>
+</html>

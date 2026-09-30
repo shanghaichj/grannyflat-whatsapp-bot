@@ -1,0 +1,3259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>老号码工作台 · Aus Granny Flat</title>
+  <!-- ui-rev: fonts-dividers-2026-08-29 -->
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --wa-green: #00a884;
+      --wa-green-dark: #008069;
+      --wa-green-deep: #005c4b;
+      --wa-bg: #f0f2f5;
+      --wa-panel: #ffffff;
+      --wa-chat-bg: #efeae2;
+      --wa-bubble-out: #d9fdd3;
+      --wa-bubble-in: #ffffff;
+      --wa-bubble-agent: #fff3cd;
+      --wa-text: #111b21;
+      --wa-muted: #667781;
+      --wa-border: #e9edef;
+      --wa-hover: #f5f6f6;
+      --wa-active: #f0f2f5;
+      --wa-danger: #ea0038;
+      --wa-shadow: 0 1px 3px rgba(11, 20, 26, 0.08);
+      --sidebar-w: 380px;
+      --sidebar-min: 260px;
+      --sidebar-max: 560px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background: #d1d7db;
+      color: var(--wa-text);
+      overflow: hidden;
+      padding-left: 68px;
+    }
+
+    .app-rail {
+      position: fixed; inset: 0 auto 0 0; width: 68px; z-index: 1200;
+      background: linear-gradient(180deg, #0b493a, #07372d); color: #fff;
+      display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 13px 0;
+    }
+    .app-rail a { text-decoration: none; }
+    .app-rail-logo { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: #fff; color: #0d4b3c; font-weight: 900; margin-bottom: 13px; }
+    .app-rail-link { width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center; color: #cce5dc; font-size: 12px; font-weight: 750; position: relative; }
+    .app-rail-link:hover, .app-rail-link.active { background: rgba(255,255,255,.16); color: #fff; }
+    .app-rail-link.active::before { content: ""; position: absolute; left: -12px; top: 9px; width: 3px; height: 26px; border-radius: 3px; background: #79d7b7; }
+    .app-rail-bottom { margin-top: auto; }
+
+    /* Full-viewport shell — flush to edges like WhatsApp Web */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 52px 0 0;
+      box-sizing: border-box;
+      background: var(--wa-panel);
+    }
+
+    /* Full-width top bar — fixed so it never scrolls away */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.7rem 1.1rem;
+      background: var(--wa-panel);
+      border-bottom: 1px solid var(--wa-border);
+      min-height: 52px;
+      position: fixed;
+      top: 0;
+      left: 68px;
+      right: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(11, 20, 26, 0.08);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: var(--wa-text);
+      min-width: 0;
+    }
+    .brand > span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--wa-green);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; }
+      .sidebar { max-height: 42vh; width: 100% !important; border-right: 0; border-bottom: 1px solid var(--wa-border); }
+      .sidebar-resizer { display: none; }
+      .analysis-bar { flex-wrap: wrap; padding: 6px 8px; }
+      .analysis-bar label { width: 100%; }
+      .analysis-bar select { flex: 1 1 150px; }
+      .analysis-stats { flex: 1 1 140px; min-width: 0; }
+    }
+
+    /* —— Legacy: AI history analysis bar (老号码专属，其余与工作台一致) —— */
+    .analysis-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      background: #f7fbfa;
+      border-bottom: 1px solid var(--wa-border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .analysis-bar label {
+      color: var(--wa-green-deep);
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .analysis-bar select,
+    .analysis-bar button {
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid #cbd9d4;
+      border-radius: 7px;
+      background: #fff;
+      color: var(--wa-text);
+      font: inherit;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    .analysis-bar button {
+      border-color: var(--wa-green-dark);
+      background: var(--wa-green-dark);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .analysis-bar button:disabled { opacity: 0.55; cursor: default; }
+    .analysis-stats {
+      min-width: 132px;
+      color: var(--wa-muted);
+      font-size: 0.76rem;
+      line-height: 1.3;
+    }
+    .analysis-stats strong { color: var(--wa-green-deep); }
+    .analysis-safety { display: block; color: #5d6f68; }
+    .legacy-badge {
+      margin-left: auto;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: #fff4e5;
+      color: #b26a00;
+      font-size: 0.76rem;
+      font-weight: 700;
+      border: 1px solid #ffd9a0;
+    }
+
+    /* —— Left: chat list —— */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--wa-panel);
+      border-right: 0;
+      min-height: 0;
+      min-width: var(--sidebar-min);
+      max-width: var(--sidebar-max);
+    }
+
+    .sidebar-resizer {
+      width: 5px;
+      flex-shrink: 0;
+      cursor: col-resize;
+      background: var(--wa-border);
+      position: relative;
+      z-index: 2;
+    }
+    .sidebar-resizer:hover,
+    .sidebar-resizer.dragging {
+      background: var(--wa-green);
+    }
+
+    .icon-btn {
+      width: auto;
+      height: 32px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--wa-muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0 10px;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .icon-btn:hover { background: rgba(11,20,26,0.06); color: var(--wa-text); }
+
+    .search-wrap {
+      padding: 8px 12px;
+      background: var(--wa-panel);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--wa-bg);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .search-box svg { flex-shrink: 0; opacity: 0.55; }
+    #search {
+      flex: 1;
+      border: 0;
+      background: transparent;
+      outline: none;
+      font: inherit;
+      font-size: 1.02rem;
+      color: var(--wa-text);
+    }
+    #search::placeholder { color: var(--wa-muted); }
+
+    .status-filters {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 6px;
+      padding: 4px 12px 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .status-filters::-webkit-scrollbar { display: none; }
+    .status-filters[hidden] { display: none; }
+    .pipeline-filters {
+      display: flex;
+      gap: 6px;
+      padding: 0 12px 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .pipeline-filters::-webkit-scrollbar { display: none; }
+    .pipeline-filters .status-filter { border: 1px solid #d8e7e3; }
+
+    .status-filter {
+      border: 0;
+      background: var(--wa-bg);
+      color: var(--wa-muted);
+      border-radius: 999px;
+      padding: 7px 13px;
+      font: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .status-filter:hover { background: #e9edef; }
+    .status-filter.active {
+      background: #e7fce3;
+      color: var(--wa-green-deep);
+      font-weight: 600;
+    }
+    .status-filter[data-status="no_reply"].active { background: #ffebee; color: #c62828; }
+    .status-filter[data-status="needs_follow_up"].active { background: #fff8e1; color: #f57f17; }
+    .status-filter[data-status="vip"].active { background: #f3e5f5; color: #7b1fa2; }
+    .status-filter[data-status="partner"].active { background: #e8f5e9; color: #2e7d32; }
+
+    .adv-filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0;
+      padding: 0 12px 10px;
+      flex-shrink: 0;
+    }
+    .adv-filters > * {
+      margin: 2px 0 2px 0;
+      padding-left: 8px;
+      border-left: 3px solid #00a884;
+    }
+    .adv-filters > *:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+    .adv-filters > *:nth-child(6n+1) { border-left-color: #00a884; }
+    .adv-filters > *:nth-child(6n+2) { border-left-color: #42a5f5; }
+    .adv-filters > *:nth-child(6n+3) { border-left-color: #ab47bc; }
+    .adv-filters > *:nth-child(6n+4) { border-left-color: #ef6c00; }
+    .adv-filters > *:nth-child(6n+5) { border-left-color: #26a69a; }
+    .adv-filters > *:nth-child(6n) { border-left-color: #ec407a; }
+    .adv-filters select,
+    .adv-filters input {
+      border: 1px solid var(--wa-border);
+      background: #fff;
+      color: var(--wa-text);
+      border-radius: 6px;
+      padding: 4px 7px;
+      font: inherit;
+      font-size: 0.88rem;
+      height: 32px;
+      max-width: 100%;
+      margin-right: 6px;
+    }
+    .adv-filters select { min-width: 78px; flex: 1 1 78px; }
+    .adv-filters input { min-width: 60px; flex: 1 1 60px; }
+    .adv-filters #flt-clear {
+      flex: 0 0 auto;
+      height: 32px;
+      padding: 0 12px;
+      font-size: 0.86rem;
+      margin-right: 0;
+    }
+
+    .bulk-toolbar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 0 12px 8px;
+      color: var(--wa-muted);
+      font-size: 0.78rem;
+    }
+    .bulk-toolbar button {
+      border: 1px solid var(--wa-border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--wa-text);
+      padding: 4px 8px;
+      font: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .bulk-toolbar button:hover:not(:disabled) { background: var(--wa-hover); }
+    .bulk-toolbar button:disabled { opacity: 0.45; cursor: default; }
+    .bulk-toolbar .bulk-count { margin-left: auto; white-space: nowrap; }
+    .contact-select-cell {
+      display: grid;
+      place-items: center;
+      min-width: 22px;
+    }
+    .contact-select {
+      width: 17px;
+      height: 17px;
+      margin: 0;
+      accent-color: var(--wa-green);
+      cursor: pointer;
+    }
+
+    #contact-list {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--wa-panel);
+    }
+
+    .contact {
+      display: grid;
+      grid-template-columns: 22px 52px 1fr;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--wa-border);
+      transition: background 80ms;
+    }
+    .contact:hover { background: var(--wa-hover); }
+    .contact.active { background: var(--wa-active); }
+
+    .contact-menu {
+      position: fixed;
+      z-index: 1000;
+      min-width: 152px;
+      padding: 6px;
+      border: 1px solid var(--wa-border);
+      border-radius: 9px;
+      background: #fff;
+      box-shadow: 0 8px 28px rgba(11, 20, 26, 0.18);
+    }
+    .contact-menu[hidden] { display: none; }
+    .contact-menu button {
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--wa-text);
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+    }
+    .contact-menu button:hover,
+    .contact-menu button:focus-visible {
+      background: var(--wa-hover);
+      outline: none;
+    }
+    .contact-menu button.danger { color: #c62828; }
+
+    .avatar {
+      width: 49px;
+      height: 49px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #cfd8dc, #90a4ae);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 1.05rem;
+      flex-shrink: 0;
+      letter-spacing: -0.02em;
+    }
+    .avatar.bot { background: linear-gradient(145deg, #26a69a, #00897b); }
+    .avatar.human { background: linear-gradient(145deg, #ef5350, #c62828); }
+    .avatar.vip { background: linear-gradient(145deg, #ab47bc, #7b1fa2); }
+    .avatar.priority-hot { background: linear-gradient(145deg, #ef5350, #c62828); }
+    .avatar.priority-warm { background: linear-gradient(145deg, #ffb74d, #ef6c00); }
+    .avatar.priority-cold { background: linear-gradient(145deg, #42a5f5, #1565c0); }
+    .avatar.priority-non-target { background: linear-gradient(145deg, #90a4ae, #546e7a); }
+    .avatar.priority-level-1 { background: linear-gradient(145deg, #90a4ae, #546e7a); }
+    .avatar.priority-level-2 { background: linear-gradient(145deg, #7986cb, #3f51b5); }
+    .avatar.priority-level-3 { background: linear-gradient(145deg, #42a5f5, #1565c0); }
+    .avatar.priority-level-4 { background: linear-gradient(145deg, #26c6da, #00838f); }
+    .avatar.priority-level-5 { background: linear-gradient(145deg, #26a69a, #00695c); }
+    .avatar.priority-level-6 { background: linear-gradient(145deg, #66bb6a, #2e7d32); }
+    .avatar.priority-level-7 { background: linear-gradient(145deg, #9e9d24, #6d6b12); }
+    .avatar.priority-level-8 { background: linear-gradient(145deg, #ffb74d, #ef6c00); }
+    .avatar.priority-level-9 { background: linear-gradient(145deg, #ff7043, #d84315); }
+    .avatar.priority-level-10 { background: linear-gradient(145deg, #ef5350, #b71c1c); }
+
+    .contact-body { min-width: 0; }
+    .contact .row1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .contact .name {
+      font-weight: 500;
+      font-size: 1.1rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .contact.unread .name { font-weight: 700; }
+    .contact.unread .preview { color: var(--wa-text); font-weight: 600; }
+    .unread-count {
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: #25d366;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .contact .time {
+      font-size: 0.75rem;
+      color: var(--wa-muted);
+      flex-shrink: 0;
+    }
+    .contact .row2 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 3px;
+    }
+    .contact .preview {
+      font-size: 0.85rem;
+      color: var(--wa-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+    .chip {
+      font-size: 0.68rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--wa-bg);
+      color: var(--wa-muted);
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+    .chip.status-new { background: #e3f2fd; color: #1565c0; }
+    .chip.status-no_reply { background: #ffebee; color: #c62828; }
+    .chip.status-needs_follow_up { background: #fff8e1; color: #ef6c00; }
+    .chip.status-vip { background: #f3e5f5; color: #7b1fa2; }
+    .chip.status-partner { background: #e8f5e9; color: #2e7d32; }
+    .chip.human { background: #ffebee; color: #c62828; }
+    .chip.temp-hot { background: #ffebee; color: #c62828; }
+    .chip.temp-warm { background: #fff8e1; color: #ef6c00; }
+    .chip.temp-cold { background: #eceff1; color: #546e7a; }
+
+    .list-empty {
+      padding: 2rem 1rem;
+      text-align: center;
+      color: var(--wa-muted);
+      font-size: 0.9rem;
+    }
+
+    /* —— Right: conversation —— */
+    .main {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      background: var(--wa-chat-bg);
+      background-image:
+        url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4cdc4' fill-opacity='0.35'%3E%3Cpath d='M10 10h2v2h-2zm20 0h2v2h-2zm20 0h2v2h-2zM0 30h2v2H0zm20 0h2v2h-2zm20 0h2v2h-2zm20 0h2v2h-2zM10 50h2v2h-2zm20 0h2v2h-2zm20 0h2v2h-2z'/%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      background: var(--wa-bg);
+      color: var(--wa-muted);
+    }
+    .empty-icon {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: #e9edef;
+      display: grid;
+      place-items: center;
+      font-size: 2.4rem;
+      margin-bottom: 1.25rem;
+      color: var(--wa-green);
+    }
+    .empty h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.75rem;
+      font-weight: 300;
+      color: #41525d;
+    }
+    .empty p { margin: 0; max-width: 360px; line-height: 1.5; font-size: 0.92rem; }
+
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .chat-workspace {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .conversation-pane {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+    }
+    .crm-drawer {
+      width: 320px;
+      flex: 0 0 320px;
+      overflow-y: auto;
+      border-left: 1px solid var(--wa-border);
+      background: #fff;
+      padding: 14px;
+    }
+    .crm-drawer[hidden] { display: none !important; }
+    .crm-drawer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .crm-drawer-head strong { color: var(--wa-green-deep); font-size: 0.95rem; }
+    .crm-drawer-head a { margin-left: auto; color: var(--wa-green-dark); font-size: 0.78rem; font-weight: 700; text-decoration: none; }
+    .crm-drawer-head a:hover { text-decoration: underline; }
+    .crm-close { border: 0; background: transparent; color: var(--wa-muted); cursor: pointer; font-size: 1rem; padding: 2px 4px; }
+    .crm-field { margin-top: 12px; }
+    .crm-field > label { display: block; color: var(--wa-muted); font-size: 0.72rem; font-weight: 700; margin-bottom: 5px; }
+    .crm-field > input, .crm-field > select {
+      width: 100%; min-height: 36px; border: 1px solid var(--wa-border); border-radius: 7px;
+      background: #fff; color: var(--wa-text); padding: 7px 9px; font: inherit; font-size: 0.86rem;
+    }
+    .crm-field > label[for="f-sales-queue"],
+    .crm-field > label[for="f-sales-stage"] { font-size: 0.84rem; color: var(--wa-green-deep); }
+    #f-sales-queue, #f-sales-stage { min-height: 40px; font-size: 0.98rem; font-weight: 600; }
+    .crm-auto { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--wa-muted); font-size: 0.74rem; }
+    .ai-stage-state { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--wa-muted); font-size: 0.74rem; font-weight: 500; }
+    .crm-save-state { min-height: 20px; margin-top: 10px; color: var(--wa-green-deep); font-size: 0.76rem; }
+    @media (max-width: 1120px) {
+      .crm-drawer { width: 280px; flex-basis: 280px; }
+    }
+
+    /* display:flex 会覆盖原生 [hidden]，必须显式隐藏 */
+    .empty[hidden],
+    .chat-panel[hidden] {
+      display: none !important;
+    }
+
+    .chat-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 12px;
+      background: var(--wa-bg);
+      border-bottom: 1px solid var(--wa-border);
+      min-height: 44px;
+      flex-shrink: 0;
+    }
+    .chat-head .avatar {
+      width: 36px;
+      height: 36px;
+      font-size: 0.9rem;
+    }
+
+    .chat-head .peer {
+      flex: 1;
+      min-width: 0;
+    }
+    .chat-head .peer-name {
+      font-weight: 500;
+      font-size: 0.95rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chat-head .peer-sub {
+      font-size: 0.75rem;
+      color: var(--wa-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mode-pill {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #e7fce3;
+      color: var(--wa-green-deep);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .mode-pill.on {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .channel-pill {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #e7f8f1;
+      color: var(--wa-green-deep);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-green {
+      background: var(--wa-green);
+      color: #fff;
+    }
+    .btn-green:hover { background: var(--wa-green-dark); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--wa-muted);
+      border: 1px solid var(--wa-border);
+    }
+    .btn-ghost:hover { background: rgba(11,20,26,0.04); color: var(--wa-text); }
+    .btn-danger-outline {
+      background: transparent;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+    .btn-danger-outline:hover { background: #ffebee; }
+    .chat-head-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .save-hint {
+      font-size: 0.72rem;
+      color: var(--wa-muted);
+      white-space: nowrap;
+      min-width: 3.5rem;
+      margin-left: 4px;
+    }
+    .save-hint.ok { color: var(--wa-green-deep); }
+    .priority-filters {
+      display: flex;
+      gap: 6px;
+      padding: 0 10px 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .priority-filters::-webkit-scrollbar { display: none; }
+    .priority-filters button {
+      flex: 0 0 auto;
+      border: 0;
+      background: #e9eef2;
+      color: var(--wa-muted);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .priority-filters button.active {
+      background: #e7fce3;
+      color: var(--wa-green-deep);
+      box-shadow: inset 0 0 0 1px #b9e8cc;
+    }
+    .priority-filters .priority-count { margin-left: 3px; font-variant-numeric: tabular-nums; }
+    .btn-warn {
+      background: var(--wa-danger);
+      color: #fff;
+    }
+    .btn-warn:hover { filter: brightness(0.95); }
+
+    .profile-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 6px 10px;
+      background: #f0f2f5;
+      border-bottom: 1px solid var(--wa-border);
+      flex-shrink: 0;
+    }
+    .profile-bar-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0;
+      width: 100%;
+    }
+    .profile-bar-row > input,
+    .profile-bar-row > select,
+    .profile-bar-row > button,
+    .profile-bar-row > .save-hint {
+      border: 1px solid var(--wa-border);
+      background: #fff;
+      color: var(--wa-text);
+      border-radius: 6px;
+      padding: 4px 7px;
+      font: inherit;
+      font-size: 0.9rem;
+      height: 32px;
+      margin: 2px 6px 2px 0;
+      padding-left: 8px;
+      box-shadow: inset 3px 0 0 #00a884;
+    }
+    .profile-bar-row > .pipeline-auto {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 32px;
+      margin: 2px 6px 2px 0;
+      padding: 4px 8px;
+      border: 1px solid var(--wa-border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--wa-muted);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .profile-bar-row > .pipeline-auto input { min-width: 0; margin: 0; }
+    .profile-bar-row > .save-hint {
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
+      margin-left: auto;
+      margin-right: 0;
+    }
+    .profile-bar-row > .contact-save-btn {
+      background: var(--wa-green);
+      color: #fff;
+      box-shadow: none;
+      border-color: var(--wa-green);
+    }
+    .profile-bar-row > .contact-save-btn:hover:not(:disabled) { background: var(--wa-green-dark); }
+    .contact-save-btn:disabled { opacity: 0.5; cursor: default; }
+    /* 分类 + 标签 合并控件 */
+    .tag-field {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      flex: 1 1 200px;
+      min-width: 170px;
+      height: 32px;
+      margin: 2px 6px 2px 0;
+      padding: 2px 34px 2px 6px;
+      border: 1px solid var(--wa-border);
+      border-radius: 6px;
+      background: #fff;
+      overflow: visible;
+      box-shadow: inset 3px 0 0 #26a69a;
+    }
+    .tag-chips { display: contents; }
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      max-width: 150px;
+      padding: 1px 3px 1px 7px;
+      border-radius: 11px;
+      background: #eef3f4;
+      color: var(--wa-text);
+      font-size: 0.76rem;
+      line-height: 1.6;
+      white-space: nowrap;
+    }
+    .tag-chip.type-chip { background: #e3f2fd; color: #0d47a1; font-weight: 600; }
+    .tag-chip > span { overflow: hidden; text-overflow: ellipsis; }
+    .tag-chip button {
+      border: 0;
+      padding: 0 2px;
+      background: transparent;
+      color: var(--wa-muted);
+      cursor: pointer;
+      line-height: 1;
+      font-size: 0.9rem;
+    }
+    .tag-chip button:hover { background: #dbe3e5; color: var(--wa-text); }
+    .tag-input {
+      flex: 1 1 80px;
+      min-width: 70px;
+      height: 24px;
+      margin: 0;
+      padding: 2px 4px;
+      border: 0;
+      outline: 0;
+      box-shadow: none;
+      font-size: 0.82rem;
+      background: transparent;
+      color: var(--wa-text);
+    }
+    .tag-dropdown-toggle {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      width: 26px;
+      height: 26px;
+      transform: translateY(-50%);
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--wa-muted);
+      cursor: pointer;
+    }
+    .tag-dropdown-toggle:hover { background: var(--wa-hover); }
+    .tag-options {
+      position: absolute;
+      z-index: 40;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 4px;
+      border: 1px solid var(--wa-border);
+      border-radius: 7px;
+      background: #fff;
+      box-shadow: 0 8px 24px rgba(11, 20, 26, 0.17);
+    }
+    .tag-options[hidden] { display: none; }
+    .tag-option {
+      display: block;
+      width: 100%;
+      padding: 6px 8px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--wa-text);
+      text-align: left;
+      font: inherit;
+      font-size: 0.83rem;
+      cursor: pointer;
+    }
+    .tag-option:hover, .tag-option:focus { background: var(--wa-hover); outline: none; }
+    .tag-option[aria-selected="true"] { color: var(--wa-green-deep); font-weight: 700; }
+    .tag-group-label {
+      padding: 6px 8px 2px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--wa-muted);
+      letter-spacing: 0.04em;
+    }
+    .profile-bar-row:nth-child(1) > *:nth-child(6n+1) { box-shadow: inset 3px 0 0 #00a884; }
+    .profile-bar-row:nth-child(1) > *:nth-child(6n+2) { box-shadow: inset 3px 0 0 #42a5f5; }
+    .profile-bar-row:nth-child(1) > *:nth-child(6n+3) { box-shadow: inset 3px 0 0 #ab47bc; }
+    .profile-bar-row:nth-child(1) > *:nth-child(6n+4) { box-shadow: inset 3px 0 0 #ef6c00; }
+    .profile-bar-row:nth-child(1) > *:nth-child(6n+5) { box-shadow: inset 3px 0 0 #26a69a; }
+    .profile-bar-row:nth-child(1) > *:nth-child(6n) { box-shadow: inset 3px 0 0 #ec407a; }
+    .profile-bar-row:nth-child(2) > *:nth-child(6n+1) { box-shadow: inset 3px 0 0 #00a884; }
+    .profile-bar-row:nth-child(2) > *:nth-child(6n+2) { box-shadow: inset 3px 0 0 #42a5f5; }
+    .profile-bar-row:nth-child(2) > *:nth-child(6n+3) { box-shadow: inset 3px 0 0 #ab47bc; }
+    .profile-bar-row:nth-child(2) > *:nth-child(6n+4) { box-shadow: inset 3px 0 0 #ef6c00; }
+    .profile-bar-row:nth-child(2) > *:nth-child(6n+5) { box-shadow: inset 3px 0 0 #26a69a; }
+    .profile-bar input { min-width: 72px; }
+    .profile-bar input.name-part { width: 4.5rem; min-width: 3.8rem; flex: 0 0 auto; }
+    .profile-bar input.wide { min-width: 140px; flex: 1 1 160px; }
+    .profile-bar input[readonly] {
+      background: #e9eef2;
+      color: #54656f;
+      cursor: default;
+    }
+    .profile-bar select { min-width: 6.5rem; max-width: 11rem; }
+    .profile-bar #f-state { width: 5.5rem; min-width: 5.5rem; }
+    .profile-bar #f-city { min-width: 7rem; max-width: 9rem; }
+    .profile-bar #btn-save {
+      margin-left: auto;
+      margin-right: 0;
+      padding: 4px 12px;
+      font-size: 0.88rem;
+      height: 32px;
+      box-shadow: none;
+      border-left: 3px solid #008069;
+    }
+    .ai-sales-card {
+      padding: 10px;
+      border: 1px solid #dce9e4;
+      border-radius: 9px;
+      background: #f4faf7;
+      color: var(--wa-text);
+      font-size: 0.82rem;
+    }
+    .ai-sales-head { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+    .ai-sales-head strong { color: var(--wa-green-deep); }
+    .ai-sales-head button { margin-left: auto; padding: 3px 8px; font-size: 0.75rem; }
+    .ai-sales-summary { line-height: 1.45; color: #3b4a54; white-space: pre-line; }
+    .ai-sales-meta { margin-top: 5px; color: var(--wa-muted); }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 4% 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      gap: 3px;
+    }
+
+    .msg {
+      max-width: min(97%, 728px);
+      padding: 5px 9px 6px;
+      border-radius: 8px;
+      white-space: normal;
+      line-height: 1.4;
+      font-size: 1.02rem;
+      box-shadow: var(--wa-shadow);
+      position: relative;
+      word-break: break-word;
+    }
+    .msg .meta {
+      font-size: 0.68rem;
+      color: var(--wa-muted);
+      margin-bottom: 1px;
+      font-weight: 500;
+    }
+    .msg .time {
+      float: right;
+      margin: 2px 0 0 10px;
+      font-size: 0.68rem;
+      color: var(--wa-muted);
+      position: relative;
+      top: 1px;
+    }
+    .msg .msg-primary,
+    .msg .msg-block {
+      display: block;
+      white-space: pre-wrap;
+    }
+    .msg .msg-sep {
+      display: block;
+      height: 0;
+      border-top: 1px solid rgba(11, 20, 26, 0.1);
+      margin: 5px 0;
+    }
+    .msg .msg-secondary {
+      display: block;
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(11, 20, 26, 0.08);
+      font-size: 0.92rem;
+      color: var(--wa-muted);
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+    .msg .msg-secondary .lang-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--wa-green-dark);
+      margin-right: 4px;
+    }
+
+    /* Customer (outgoing from their phone → our inbox left) */
+    .msg.user {
+      align-self: flex-start;
+      background: var(--wa-bubble-in);
+      border-top-left-radius: 0;
+    }
+    /* Bot / agent replies (right, green) */
+    .msg.assistant {
+      align-self: flex-end;
+      background: var(--wa-bubble-out);
+      border-top-right-radius: 0;
+    }
+    .msg.agent {
+      align-self: flex-end;
+      background: var(--wa-bubble-agent);
+      border-top-right-radius: 0;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .composer {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      padding: 10px 16px 14px;
+      background: var(--wa-bg);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .composer textarea {
+      flex: 1;
+      min-height: 44px;
+      max-height: 120px;
+      resize: none;
+      border: 0;
+      background: #fff;
+      color: var(--wa-text);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font: inherit;
+      font-size: 0.95rem;
+      box-shadow: var(--wa-shadow);
+      outline: none;
+    }
+    .composer textarea::placeholder { color: var(--wa-muted); }
+
+    /* ===== 斜杠模板选择器（输入 / 弹出，只显示模板名） ===== */
+    .tpl-pop {
+      position: absolute;
+      left: 16px;
+      right: 74px;
+      bottom: calc(100% - 4px);
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 6px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid var(--wa-border, #e5e7eb);
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.18);
+      z-index: 60;
+      display: none;
+    }
+    .tpl-pop.show { display: block; }
+    .tpl-pop .tpl-head {
+      padding: 6px 10px 8px;
+      font-size: 12px;
+      color: var(--wa-muted);
+      border-bottom: 1px solid var(--wa-border, #e5e7eb);
+      margin-bottom: 4px;
+    }
+    .tpl-pop .tpl-head b { color: #334155; }
+    .tpl-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      min-height: 40px;
+    }
+    .tpl-item:hover,
+    .tpl-item.active { background: #f0f7f2; }
+    .tpl-item .tpl-name {
+      flex: 0 0 auto;
+      min-width: 48px;
+      padding: 3px 8px;
+      border-radius: 7px;
+      background: var(--wa-green-dark, #008069);
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.2px;
+    }
+    .tpl-item .tpl-desc {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      color: var(--wa-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tpl-empty {
+      padding: 14px;
+      text-align: center;
+      color: var(--wa-muted);
+      font-size: 13.5px;
+    }
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--wa-green);
+      color: #fff;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      box-shadow: var(--wa-shadow);
+    }
+    .send-btn:hover { background: var(--wa-green-dark); }
+    .send-btn svg { display: block; }
+
+    .side-meta {
+      padding: 6px 16px 10px;
+      font-size: 0.75rem;
+      color: var(--wa-muted);
+      background: var(--wa-bg);
+      border-top: 1px solid var(--wa-border);
+    }
+    pre.mini {
+      margin: 0;
+      padding: 8px 16px 12px;
+      background: #fff;
+      border-top: 1px solid var(--wa-border);
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 0.7rem;
+      color: var(--wa-muted);
+      max-height: 100px;
+      overflow: auto;
+    }
+
+    .toggle-details {
+      font-size: 0.75rem;
+      color: var(--wa-green-dark);
+      background: none;
+      border: 0;
+      cursor: pointer;
+      padding: 0;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+    .delivery-mark { display:inline-block; margin-left:5px; color:#667781; font-size:12px; font-weight:600; }
+    .delivery-mark.read { color:#168bd2; }
+    .delivery-mark.failed { color:#d92d20; }
+  </style>
+</head>
+<body>
+  <nav class="app-rail" aria-label="主功能">
+    <a class="app-rail-logo" href="/crm/home" title="Aus Granny Flat">GF</a>
+    <a class="app-rail-link active" href="/admin" title="客服工作台">客服</a>
+    <a class="app-rail-link" href="/crm/home" title="销售 CRM">CRM</a>
+    <a class="app-rail-link" href="/admin/old-number" title="老号码独立入口">旧号</a>
+    <a class="app-rail-link" href="/teach" title="教模型">教学</a>
+    <a class="app-rail-link app-rail-bottom" href="/api/admin/diagnostics" title="系统诊断">诊断</a>
+  </nav>
+  <div class="app-shell">
+    <header class="page-header">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.15 2 11.25c0 2.8 1.3 5.3 3.35 7.05L4.5 22l3.95-1.25A10.3 10.3 0 0 0 12 20.5c5.52 0 10-4.15 10-9.25S17.52 2 12 2zm.9 12.4-2.55-1.55-2.8 1.55 3.05-5.9 2.55 1.55 2.8-1.55-3.05 5.9z"/></svg>
+        </div>
+        <span>老号码工作台</span>
+      </div>
+      <span class="legacy-badge" title="独立数据库：data/legacy_number">老号码 · 数据库隔离</span>
+    </header>
+
+    <section class="analysis-bar" aria-label="AI 历史分析">
+      <label for="analysis-scope">AI 分析</label>
+      <select id="analysis-scope" aria-label="分析范围">
+        <option value="all" selected>全部老号码联系人（含已归档）</option>
+        <option value="filtered">当前筛选结果</option>
+        <option value="selected">当前选中联系人</option>
+      </select>
+      <button type="button" id="analysis-run">开始分析</button>
+      <div class="analysis-stats" role="status" aria-live="polite"><strong id="analysis-target-count">全部</strong><span id="analysis-target-label">老号码联系人（含已归档）</span> · <span id="analysis-message">分析历史聊天，自动补全字段并生成 AI 销售摘要</span><span class="analysis-safety">仅分析本地存档，不发送 WhatsApp 消息</span></div>
+    </section>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="search-wrap">
+          <div class="search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667781" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input id="search" type="search" placeholder="搜索所有联系人和聊天内容" autocomplete="off" />
+          </div>
+        </div>
+        <div class="status-filters" id="status-filters" hidden></div>
+        <div class="pipeline-filters" id="pipeline-filters" aria-label="销售管道" hidden></div>
+        <div class="priority-filters" id="priority-filters" aria-label="优先级">
+          <button type="button" class="active" data-priority="all">全部客户 <span class="priority-count" id="priority-count-all">0</span></button>
+          <button type="button" data-priority="reply">待回复 <span class="priority-count" id="priority-count-reply">0</span></button>
+          <button type="button" data-priority="hot">重点客户 <span class="priority-count" id="priority-count-hot">0</span></button>
+          <button type="button" data-priority="warm">意向客户 <span class="priority-count" id="priority-count-warm">0</span></button>
+          <button type="button" data-priority="cold">咨询客户 <span class="priority-count" id="priority-count-cold">0</span></button>
+          <button type="button" data-priority="non_target">非目标客户 <span class="priority-count" id="priority-count-non-target">0</span></button>
+          <button type="button" data-priority="today">今日跟进 <span class="priority-count" id="priority-count-today">0</span></button>
+          <button type="button" data-priority="overdue">逾期 <span class="priority-count" id="priority-count-overdue">0</span></button>
+          <button type="button" data-priority="completed">已完成 <span class="priority-count" id="priority-count-completed">0</span></button>
+        </div>
+        <div class="adv-filters" id="adv-filters">
+          <select id="flt-contact-type" title="客户身份"><option value="">客户身份</option></select>
+          <select id="flt-tags" title="客服手工标签"><option value="">标签</option></select>
+          <select id="flt-workflow" title="处理状态">
+            <option value="">处理状态</option>
+            <option value="needs_agent">待客服回复</option>
+            <option value="human">人工接管</option>
+            <option value="ai">AI 接待</option>
+          </select>
+          <select id="flt-sales-stage" title="销售阶段" hidden><option value="">销售阶段</option></select>
+          <select id="flt-state" title="州"><option value="">州（全部）</option></select>
+          <select id="flt-city" title="城市"><option value="">城市（全部）</option></select>
+          <button type="button" class="status-filter" id="flt-clear">清空</button>
+        </div>
+        <div class="bulk-toolbar" id="bulk-toolbar" aria-label="批量操作">
+          <button type="button" id="bulk-select-current">全选当前结果</button>
+          <button type="button" id="bulk-clear-selection">清除选择</button>
+          <button type="button" data-bulk-action="archive" disabled>批量归档</button>
+          <span class="bulk-count" id="bulk-selected-count" role="status" aria-live="polite">已选 0</span>
+        </div>
+        <div id="contact-list"></div>
+        <div class="contact-menu" id="contact-menu" role="menu" hidden>
+          <button type="button" class="danger" data-action="delete" role="menuitem">删除</button>
+          <button type="button" data-action="archive" role="menuitem">归档</button>
+        </div>
+      </aside>
+      <div class="sidebar-resizer" id="sidebar-resizer" title="拖动调整宽度"></div>
+
+      <main class="main" id="main-panel">
+        <div class="empty" id="empty-state">
+          <div class="empty-icon">💬</div>
+          <h2>Aus Granny Flat</h2>
+          <p>从左侧选择客户，查看完整聊天记录并人工回复。<br />WhatsApp 与网页进线客户会自动出现在列表中。</p>
+        </div>
+
+        <div class="chat-panel" id="chat-panel" hidden>
+          <div class="chat-head">
+            <div class="avatar" id="peer-avatar">?</div>
+            <div class="peer">
+              <div class="peer-name" id="peer-name">客户</div>
+              <div class="peer-sub" id="peer-sub">—</div>
+            </div>
+            <div class="chat-head-actions">
+              <span class="channel-pill" id="channel-pill">WhatsApp · 已连接</span>
+              <span class="mode-pill" id="mode-pill">AI 接待中</span>
+              <button type="button" class="btn btn-ghost" id="btn-toggle-crm" aria-expanded="true">收起 CRM</button>
+              <button type="button" class="btn btn-warn" id="btn-toggle-mode">接管对话</button>
+              <button type="button" class="btn btn-ghost" id="btn-archive">归档</button>
+              <button type="button" class="btn btn-danger-outline" id="btn-delete">删除</button>
+            </div>
+          </div>
+
+          <div class="profile-bar" id="profile-bar">
+            <div class="profile-bar-row">
+              <input id="f-surname" class="name-part" placeholder="姓" title="姓" />
+              <input id="f-given" class="name-part" placeholder="名" title="名" />
+              <select id="f-state" title="州">
+                <option value="">州</option>
+                <option value="NSW">NSW 新州</option>
+                <option value="VIC">VIC 维州</option>
+                <option value="QLD">QLD 昆州</option>
+                <option value="SA">SA 南澳</option>
+                <option value="WA">WA 西澳</option>
+                <option value="TAS">TAS 塔州</option>
+                <option value="ACT">ACT 首都领地</option>
+                <option value="NT">NT 北领地</option>
+              </select>
+              <select id="f-city" title="城市">
+                <option value="">城市</option>
+                <option value="悉尼">悉尼</option>
+                <option value="墨尔本">墨尔本</option>
+                <option value="布里斯班">布里斯班</option>
+                <option value="黄金海岸">黄金海岸</option>
+                <option value="阳光海岸">阳光海岸</option>
+                <option value="堪培拉">堪培拉</option>
+                <option value="珀斯">珀斯</option>
+                <option value="阿德莱德">阿德莱德</option>
+                <option value="纽卡斯尔">纽卡斯尔</option>
+                <option value="卧龙岗">卧龙岗</option>
+              </select>
+              <select id="f-contact-type" title="客户身份"></select>
+            </div>
+            <div class="profile-bar-row">
+              <input id="f-address" class="wide" placeholder="详细门牌地址（含邮编，AI 自动读取，无则人工输入）" title="详细门牌地址（含邮编）：默认从聊天读取，也可人工填写" />
+              <select id="f-customer-status" title="兼容状态字段" hidden></select>
+              <div class="tag-field" id="f-tagfield">
+                <div class="tag-chips" id="f-tag-chips"></div>
+                <input id="f-tags" class="tag-input" maxlength="48" placeholder="选择或输入标签，按 Enter 添加" title="选择或输入标签" aria-label="选择或输入标签" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-tag-options" autocomplete="off" />
+                <button type="button" class="tag-dropdown-toggle" id="f-tag-toggle" title="选择已有标签" aria-label="选择已有标签" aria-expanded="false">▾</button>
+                <div class="tag-options" id="f-tag-options" role="listbox" aria-label="可选分类与标签" hidden></div>
+              </div>
+              <select id="f-workflow" title="兼容处理状态字段" hidden></select>
+              <button type="button" class="btn contact-save-btn" id="btn-save-contact" disabled>保存</button>
+              <span class="save-hint" id="save-hint"></span>
+            </div>
+          </div>
+          <div class="chat-workspace">
+            <section class="conversation-pane">
+              <div id="messages"></div>
+              <form class="composer" id="agent-form">
+                <!-- 斜杠模板选择器：输入 / 弹出（老号码仅保存到档案记录，不实际发送） -->
+                <div class="tpl-pop" id="tplPop">
+                  <div class="tpl-head">选择模板 <b>（老号码未接入 Twilio，仅保存记录不外发）</b></div>
+                  <div id="tplList"></div>
+                </div>
+                <textarea id="agent-input" placeholder="输入内容仅保存到老号码档案（不外发）；打 / 选择模板" rows="1" required></textarea>
+                <button type="submit" class="send-btn" title="发送" aria-label="发送">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+              </form>
+              <div class="side-meta" id="session-meta" hidden aria-hidden="true"></div>
+              <pre class="mini" id="questionnaire-view" hidden aria-hidden="true">{}</pre>
+            </section>
+            <aside class="crm-drawer" id="crm-drawer">
+              <div class="crm-drawer-head">
+                <strong>客户 CRM</strong>
+                <a id="crm-detail-link" href="/crm?source=legacy">查看完整 CRM →</a>
+                <button type="button" class="crm-close" id="btn-close-crm" title="收起 CRM">×</button>
+              </div>
+              <div class="ai-sales-card" id="ai-sales-card">
+                <div class="ai-sales-head">
+                  <strong>AI 销售摘要</strong>
+                  <span class="chip" id="qualification-chip">0分</span>
+                  <span class="chip" id="temperature-chip">咨询客户</span>
+                  <button type="button" class="btn btn-ghost" id="btn-refresh-summary">更新</button>
+                </div>
+                <div class="ai-sales-summary" id="ai-sales-summary">尚未生成摘要</div>
+                <div class="ai-sales-meta" id="ai-sales-meta"></div>
+              </div>
+              <div class="crm-field"><label for="f-sales-queue">优先级</label><select id="f-sales-queue"><option value="auto">自动判断</option><option value="hot">重点客户</option><option value="warm">意向客户</option><option value="cold">咨询客户</option><option value="non_target">非目标客户</option></select><div class="ai-stage-state" id="sales-queue-state">人工设置会同步到 CRM</div></div>
+              <div class="crm-field"><label for="f-sales-stage">销售状态</label><select id="f-sales-stage" title="可人工修改销售状态"></select><input id="f-sales-stage-auto" type="checkbox" hidden /><div class="ai-stage-state" id="ai-stage-state">自动判断或人工设置</div></div>
+              <div class="crm-field"><label for="f-next-action">下一步行动</label><input id="f-next-action" placeholder="下一步行动（清空则自动建议）" /><label class="crm-auto"><input id="f-next-action-auto" type="checkbox" /> 自动行动</label></div>
+              <div class="crm-field"><label for="f-follow-up-due">跟进时间</label><input id="f-follow-up-due" type="datetime-local" /><label class="crm-auto"><input id="f-follow-up-auto" type="checkbox" /> 自动时间</label></div>
+              <div class="crm-save-state" id="crm-save-state">修改后请点击“保存”</div>
+            </aside>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const contactListEl = document.getElementById("contact-list");
+    const contactMenu = document.getElementById("contact-menu");
+    const searchEl = document.getElementById("search");
+    const statusFiltersEl = document.getElementById("status-filters");
+    const pipelineFiltersEl = document.getElementById("pipeline-filters");
+    const emptyState = document.getElementById("empty-state");
+    const chatPanel = document.getElementById("chat-panel");
+    const messagesEl = document.getElementById("messages");
+    const fSurname = document.getElementById("f-surname");
+    const fGiven = document.getElementById("f-given");
+    const fState = document.getElementById("f-state");
+    const fCity = document.getElementById("f-city");
+    const fAddress = document.getElementById("f-address");
+    const fContactType = document.getElementById("f-contact-type");
+    const LOCATION_PREFIXES = [
+      "阳光海岸", "黄金海岸", "布里斯班", "墨尔本", "堪培拉", "悉尼", "珀斯",
+      "阿德莱德", "纽卡斯尔", "卧龙岗",
+      "首都领地", "北领地", "新州", "维州", "昆州", "南澳", "西澳", "塔州",
+    ];
+    const fCustomerStatus = document.getElementById("f-customer-status");
+    const fTags = document.getElementById("f-tags");
+    const tagField = document.getElementById("f-tagfield");
+    const fTagToggle = document.getElementById("f-tag-toggle");
+    const tagChips = document.getElementById("f-tag-chips");
+    const tagOptions = document.getElementById("f-tag-options");
+    let selectedTags = [];
+    let comboOpen = false;
+    const fWorkflow = document.getElementById("f-workflow");
+    const fSalesStage = document.getElementById("f-sales-stage");
+    const fSalesStageAuto = document.getElementById("f-sales-stage-auto");
+    const fSalesQueue = document.getElementById("f-sales-queue");
+    const salesQueueState = document.getElementById("sales-queue-state");
+    const aiStageState = document.getElementById("ai-stage-state");
+    const fNextAction = document.getElementById("f-next-action");
+    const fNextActionAuto = document.getElementById("f-next-action-auto");
+    const fFollowUpDue = document.getElementById("f-follow-up-due");
+    const fFollowUpAuto = document.getElementById("f-follow-up-auto");
+    const aiSalesSummary = document.getElementById("ai-sales-summary");
+    const aiSalesMeta = document.getElementById("ai-sales-meta");
+    const qualificationChip = document.getElementById("qualification-chip");
+    const temperatureChip = document.getElementById("temperature-chip");
+    const btnRefreshSummary = document.getElementById("btn-refresh-summary");
+    const saveHint = document.getElementById("save-hint");
+    const channelPill = document.getElementById("channel-pill");
+    const btnSaveContact = document.getElementById("btn-save-contact");
+    const crmDrawer = document.getElementById("crm-drawer");
+    const btnToggleCrm = document.getElementById("btn-toggle-crm");
+    const btnCloseCrm = document.getElementById("btn-close-crm");
+    const crmDetailLink = document.getElementById("crm-detail-link");
+    const crmSaveState = document.getElementById("crm-save-state");
+    const btnToggle = document.getElementById("btn-toggle-mode");
+    const btnArchive = document.getElementById("btn-archive");
+    const btnDelete = document.getElementById("btn-delete");
+    const modePill = document.getElementById("mode-pill");
+    const priorityFilters = document.getElementById("priority-filters");
+    const agentForm = document.getElementById("agent-form");
+    const agentInput = document.getElementById("agent-input");
+    const tplPop = document.getElementById("tplPop");
+    const tplList = document.getElementById("tplList");
+
+    // ===== 斜杠模板（与 mobile-chat.html 保持一致）=====
+    // 数据来自 Twilio Content 模板（名称为真实 friendly_name：60s / 70s / 80s）。
+    // 插入时修正三处：① 去掉 "Hello {{1}}, " 称呼段；② 面积数字按模板名修正
+    // （Twilio 原件里 70s/80s 正文都误写成 "60 m²"）；③ 把原件写坏的 "https:/" 补成 "https://"。
+        const SLASH_TEMPLATES = [
+        // HXf42f7b939af24efa5cc104a1cac356ba
+        {
+          key: "60price",
+          name: "60price",
+          area: 60,
+          desc: "60㎡ 报价（两档套餐）",
+          text: "🏠 Two Flexible Pricing Packages for Your Granny Flat Project for 60 sqm\n\n📦 Package 1 | AUD 77,400‑95,000\nCovers all building materials + full delivery transport straight to port of your city.\n\nYou can register as an owner‑builder and organise a local builder for installation by yourself, which can save you roughly $20k‑$30k on labour costs.\n\n🔧 Package 2 | AUD 153,000‑187,000\nAll materials + professional on‑site installation + full council certification & OC approval included.\nWe manage the entire build process end to end with our licensed local builder.\n\nThe final quotation is subject to the following factors: the number of bathrooms, transportation distance, and whether the porch and deck are included.\n\n❓️ ❓ Could you let me know which floor‑plan you like?"
+        },
+        // HX917e8386f1811c8ecd83e6175b386b65
+        {
+          key: "70price",
+          name: "70price",
+          area: 70,
+          desc: "70㎡ 报价（两档套餐）",
+          text: "🏠 Two Flexible Pricing Packages for Your Granny Flat Project for 70 sqm\n\n📦 Package 1 | AUD 86,000‑106,000\nCovers all building materials + full delivery transport straight to port of your city.\nYou can register as an owner‑builder and organise a local builder for installation by yourself, which can save you roughly $20k‑$30k on labour costs.\n\n🔧 Package 2 | AUD 167,000‑205,000\nAll materials + professional on‑site installation + full council certification & OC approval included.\nWe manage the entire build process end to end with our licensed local builder.\n\nThe final quotation is subject to the following factors: the number of bathrooms, transportation distance, and whether the porch and deck are included."
+        },
+        // HXd66cda46b5e2f995dcff11716dea82ba
+        {
+          key: "60s",
+          name: "60s",
+          area: 60,
+          desc: "60㎡ 户型链接 · /m/60",
+          text: "Here are four 60 m² two‑bedroom granny‑flat floor plans. Please review them and let me know which one you prefer.\n\nhttps://www.ausgrannyflat.com/m/60"
+        },
+        // HX101ab5668b00f2aad79347853f177f03
+        {
+          key: "70s",
+          name: "70s",
+          area: 70,
+          desc: "70㎡ 户型链接 · /m/70",
+          text: "Here are four 70 m² two‑bedroom granny‑flat floor plans. Please review them and let me know which one you prefer.\n\nhttps://www.ausgrannyflat.com/m/70"
+        },
+        // HX0938dac4bb174f6487541cbc8b635484
+        {
+          key: "80s",
+          name: "80s",
+          area: 80,
+          desc: "80㎡ 户型链接 · /m/80",
+          text: "Here are four 80 m² two‑bedroom granny‑flat floor plans. Please review them and let me know which one you prefer.\n\nhttps://www.ausgrannyflat.com/m/80"
+        },
+        // HXad1b8c385087a29613227481a2953d15
+        {
+          key: "role",
+          name: "role",
+          area: null,
+          desc: "客户身份选择（首次答复后的后续回合）",
+          text: "To serve you better, could you tell me which best describes you: owner-occupier, builder, investor, distributor, or other?"
+        },
+        // HX3d2798efe159204f50ba1f747dbfaf6d
+        {
+          key: "introduce",
+          name: "introduce",
+          area: null,
+          desc: "产品介绍（标准/团队/工艺）",
+          text: "🏠 Our Granny Flat Solution ✨\n\nMost building materials are sourced from China. Design, materials & construction fully comply with Australian Class 1A granny‑flat standards.\n\n🏭 The unit is pre‑fabricated & pre‑assembled in China factory, shipped to Australia via container sea freight. Our trusted local Australian builder completes on‑site installation.\n\n👷‍♂️ Our full local team including Australian architects, structural engineers, surveyors, licensed builders & qualified electricians/plumbers work together. We support you to secure building approval and final Occupancy Certificate (OC).\n\n✅ All inspection‑required sections are left exposed for site survey check. Part of plumbing & electrical work will be finished by local tradesmen.\n\n🏗️ Light‑weight steel frame as main structure. Other finishing materials are same as conventional timber‑frame houses in Australia. You can pick your preferred finishing materials freely.\n\n🔧 After handover, all building warranty & maintenance services are provided directly by our local Australian builder.\n\nWould you like to know more details? 😊"
+        },
+        // HXcddfac471c4531d8746a3474538471bc
+        {
+          key: "shiping",
+          name: "shiping",
+          area: null,
+          desc: "物流说明（集装箱/拼装）",
+          text: " Each house requires one 40-foot open-top container and one 20-foot standard container. \nThe bathrooms are modular, while the rest of the structure is panel-based.To ensure we obtain the final Occupation Certificate (OC), \n\nthese prefabricated components must be assembled on site."
+        },
+        // HX2c90e2ae47b7f28b6a1e4df94d7fa98f
+        {
+          key: "address",
+          name: "address",
+          area: null,
+          desc: "催客户提供地址",
+          text: "To provide you with a quote and help you find a suitable local builder, please let us know your address."
+        }
+      ];
+    let tplOpen = false;
+    let tplActiveIdx = 0;
+    let tplMatches = [];
+    const sessionMeta = document.getElementById("session-meta");
+    const questionnaireView = document.getElementById("questionnaire-view");
+    const peerName = document.getElementById("peer-name");
+    const peerSub = document.getElementById("peer-sub");
+    const peerAvatar = document.getElementById("peer-avatar");
+    const sidebarEl = document.querySelector(".sidebar");
+    const sidebarResizer = document.getElementById("sidebar-resizer");
+    const fltContactType = document.getElementById("flt-contact-type");
+    const fltTags = document.getElementById("flt-tags");
+    const fltWorkflow = document.getElementById("flt-workflow");
+    const fltSalesStage = document.getElementById("flt-sales-stage");
+    const fltState = document.getElementById("flt-state");
+    const fltCity = document.getElementById("flt-city");
+    const fltClear = document.getElementById("flt-clear");
+    let salesQueueReplyIds = new Set();
+    const bulkSelectCurrent = document.getElementById("bulk-select-current");
+    const bulkClearSelection = document.getElementById("bulk-clear-selection");
+    const bulkSelectedCount = document.getElementById("bulk-selected-count");
+    const bulkActionButtons = [...document.querySelectorAll("[data-bulk-action]")];
+
+    let contacts = [];
+    let contactTypes = [];
+    let customerStatuses = [];
+    let workflowStatuses = [];
+    let salesStages = [];
+    let statusFilter = "all";
+    let salesStageFilter = "all";
+    let priorityFilter = "all";
+    let selectedId = null;
+    let selectedContact = null;
+    let pollTimer = null;
+    let contactsFingerprint = "";
+    let formHydrating = false;
+    let saving = false;
+    let formDirty = false;
+    let formRevision = 0;
+    let contextMenuSessionId = null;
+    const selectedContactIds = new Set();
+
+    const COMPOUND_SURNAMES = ["欧阳","司马","上官","诸葛","司徒","皇甫","夏侯","尉迟","公孙","慕容","长孙","宇文","司空","端木","东方"];
+
+    function stripLocationPrefix(name) {
+      let s = String(name || "").trim();
+      for (const p of LOCATION_PREFIXES) {
+        if (s.startsWith(p) && s.length > p.length) {
+          s = s.slice(p.length).trim();
+          break;
+        }
+      }
+      return s;
+    }
+
+    function splitDisplayName(name) {
+      const s = stripLocationPrefix(name);
+      if (!s) return { surname: "", given: "" };
+      // A phone number is a contact identifier, not a value for either name field.
+      const digits = (s.match(/\d/g) || []).length;
+      if (/^\+?[\d\s().-]+$/.test(s) && (digits >= 7 || /^\d{4}$/.test(s))) {
+        return { surname: "", given: "" };
+      }
+      if (/\s/.test(s)) {
+        const parts = s.split(/\s+/).filter(Boolean);
+        return { surname: parts[0] || "", given: parts.slice(1).join(" ") };
+      }
+      if (/[\u4e00-\u9fff]/.test(s)) {
+        for (const c of COMPOUND_SURNAMES) {
+          if (s.startsWith(c)) return { surname: c, given: s.slice(c.length) };
+        }
+        return { surname: s.slice(0, 1), given: s.slice(1) };
+      }
+      // 纯数字（电话后四位）不当作姓名编辑
+      if (/^\d{4}$/.test(s)) return { surname: "", given: "" };
+      return { surname: "", given: s };
+    }
+
+    function joinDisplayName(surname, given) {
+      const a = String(surname || "").trim();
+      const b = String(given || "").trim();
+      if (!a && !b) return "";
+      if (!a) return b;
+      if (!b) return a;
+      if (/[\u4e00-\u9fff]/.test(a + b)) return a + b;
+      return `${a} ${b}`;
+    }
+
+    const filterCollator = new Intl.Collator("zh-CN", { numeric: true, sensitivity: "base" });
+
+    function uniqueFilterValues(values) {
+      const output = [];
+      const seen = new Set();
+      for (const raw of values || []) {
+        const value = String(raw || "").trim();
+        const key = value.toLocaleLowerCase();
+        if (!value || seen.has(key)) continue;
+        seen.add(key);
+        output.push(value);
+      }
+      return output.sort((a, b) => filterCollator.compare(a, b));
+    }
+
+    function replaceFilterOptions(select, placeholder, choices) {
+      const previous = String(select.value || "");
+      const previousKey = previous.toLocaleLowerCase();
+      const desired = [""].concat(choices || []);
+      const current = [...select.options].map((option) => option.value);
+      if (current.length === desired.length && current.every((value, index) => value === desired[index])) return false;
+      const fragment = document.createDocumentFragment();
+      const first = document.createElement("option");
+      first.value = "";
+      first.textContent = placeholder;
+      fragment.appendChild(first);
+      for (const choice of choices || []) {
+        const option = document.createElement("option");
+        option.value = choice;
+        option.textContent = choice;
+        fragment.appendChild(option);
+      }
+      select.replaceChildren(fragment);
+      const retained = (choices || []).find((choice) => choice.toLocaleLowerCase() === previousKey);
+      select.value = retained || "";
+      return previous !== select.value;
+    }
+
+    function refreshAdvancedFilterOptions() {
+      let selectionChanged = false;
+      const stateChoices = uniqueFilterValues(contacts.map((contact) => contact.state));
+      selectionChanged = replaceFilterOptions(fltState, "州（全部）", stateChoices) || selectionChanged;
+      const selectedState = fltState.value.trim().toLocaleLowerCase();
+      const cityChoices = uniqueFilterValues(contacts
+        .filter((contact) => !selectedState
+          || String(contact.state || "").trim().toLocaleLowerCase() === selectedState)
+        .map((contact) => contact.city));
+      selectionChanged = replaceFilterOptions(fltCity, "城市（全部）", cityChoices) || selectionChanged;
+      selectionChanged = replaceComboFilter() || selectionChanged;
+      const tagChoices = uniqueFilterValues(contacts
+        .flatMap((contact) => Array.isArray(contact.tags) ? contact.tags : [])
+        .filter((tag) => !typeHit(tag)));
+      selectionChanged = replaceFilterOptions(fltTags, "标签", tagChoices) || selectionChanged;
+      return selectionChanged;
+    }
+
+    // ===== 分类 / 标签 合并控件 =====
+    function uniqueTags(list) {
+      const seen = new Set();
+      const out = [];
+      for (const raw of list || []) {
+        const value = String(raw || "").trim();
+        if (!value) continue;
+        const key = value.toLocaleLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(value);
+      }
+      return out;
+    }
+
+    // 客户身份使用固定选项；自由标签通过旁边的文本框独立筛选。
+    function replaceComboFilter() {
+      const previous = fltContactType.value;
+      const parts = [`<option value="">客户身份</option>`];
+      const types = (contactTypes || []).filter((c) => c && c.code && c.code !== "unknown");
+      for (const c of types) {
+        parts.push(`<option value="${escapeHtml(c.code)}">${escapeHtml(c.label)}</option>`);
+      }
+      fltContactType.innerHTML = parts.join("");
+      fltContactType.value = previous;
+      return previous !== fltContactType.value;
+    }
+
+    function currentTypeCode() {
+      return fContactType ? fContactType.value : "";
+    }
+
+    function currentTypeLabel() {
+      const code = currentTypeCode();
+      const hit = (contactTypes || []).find((c) => c && c.code === code);
+      return hit ? hit.label : code;
+    }
+
+    // 客户身份与自由标签严格分离：身份使用 contact_type，标签只保存客服输入。
+    function typeHit(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return null;
+      return (
+        (contactTypes || []).find(
+          (c) => c && (c.code === raw || c.label === raw)
+        ) || null
+      );
+    }
+
+    function typeLabelOf(value) {
+      const hit = typeHit(value);
+      return hit ? hit.label : String(value || "");
+    }
+
+    function typeCodeOf(value) {
+      const hit = typeHit(value);
+      return hit ? hit.code : null;
+    }
+
+    function tagKey(value) {
+      return `tag:${String(value || "").trim().toLocaleLowerCase()}`;
+    }
+
+    // 自由标签只按大小写去重，不再映射成客户身份。
+    function mergeDuplicateTags(list) {
+      const out = [];
+      const seen = new Set();
+      for (const raw of list || []) {
+        const value = String(raw || "").trim();
+        if (!value) continue;
+        const key = tagKey(value);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(value);
+      }
+      return out;
+    }
+
+    function derivedContactType() {
+      return fContactType.value || "unknown";
+    }
+
+    function renderSelectedTags() {
+      if (!tagChips) return;
+      tagChips.replaceChildren();
+      for (const tag of selectedTags) {
+        const chip = document.createElement("span");
+        chip.className = "tag-chip";
+        const text = document.createElement("span");
+        const label = tag;
+        text.textContent = label;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.setAttribute("aria-label", `删除 ${label}`);
+        remove.textContent = "×";
+        remove.addEventListener("click", () => {
+          selectedTags = selectedTags.filter((item) => item !== tag);
+          renderSelectedTags();
+          renderComboOptions();
+          markContactDirty();
+        });
+        chip.append(text, remove);
+        tagChips.appendChild(chip);
+      }
+    }
+
+    function comboChoices() {
+      const query = (fTags ? fTags.value : "").trim().toLocaleLowerCase();
+      const tags = uniqueTags(contacts.flatMap((contact) => Array.isArray(contact.tags) ? contact.tags : []))
+        .filter((t) => !typeHit(t))
+        .map((t) => ({ kind: "tag", value: t, label: t }));
+      const chosen = new Set(selectedTags.map((t) => tagKey(t)));
+      const seen = new Set();
+      const all = [];
+      for (const item of tags) {
+        const key = tagKey(item.value);
+        if (chosen.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        all.push(item);
+      }
+      if (!query) return all;
+      return all.filter((item) => String(item.value).toLocaleLowerCase().includes(query)
+        || String(item.label).toLocaleLowerCase().includes(query));
+    }
+
+    function renderComboOptions() {
+      if (!tagOptions) return;
+      tagOptions.replaceChildren();
+      const items = comboChoices();
+      for (const item of items) {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "tag-option";
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", "false");
+        option.textContent = item.value;
+        option.addEventListener("click", () => {
+          addSelectedTag(item.value, true);
+          if (fTags) { fTags.value = ""; fTags.focus(); }
+        });
+        tagOptions.appendChild(option);
+      }
+      if (!tagOptions.childElementCount) {
+        const empty = document.createElement("div");
+        empty.className = "tag-option";
+        empty.textContent = "按 Enter 添加标签";
+        tagOptions.appendChild(empty);
+      }
+    }
+
+    function addSelectedTag(raw, save = true) {
+      const next = String(raw || "").trim();
+      if (!next) return false;
+      const merged = mergeDuplicateTags([...selectedTags, next]);
+      if (fTags) fTags.value = "";
+      if (merged.length === selectedTags.length) return false;
+      selectedTags = merged;
+      renderSelectedTags();
+      renderComboOptions();
+      if (save) markContactDirty();
+      return true;
+    }
+
+    function setComboDropdown(open) {
+      comboOpen = !!open;
+      if (!tagOptions) return;
+      tagOptions.hidden = !open;
+      if (fTags) fTags.setAttribute("aria-expanded", String(!!open));
+      if (fTagToggle) fTagToggle.setAttribute("aria-expanded", String(!!open));
+      if (open) renderComboOptions();
+    }
+
+    function authFetch(url, options = {}) {
+      return fetch(url, { credentials: "same-origin", ...options }).then((res) => {
+        if (res.status === 401) {
+          location.href = "/admin/login";
+          throw new Error("login required");
+        }
+        return res;
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function initials(name) {
+      const s = String(name || "?").trim();
+      if (!s) return "?";
+      const parts = s.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return s.slice(0, 2).toUpperCase();
+    }
+
+    function avatarLabel(c) {
+      if (c && c.avatar_no != null && c.avatar_no !== "") return String(c.avatar_no);
+      return initials(c && (c.name || c.whatsapp_phone));
+    }
+
+    function avatarPriorityLevel(c) {
+      const score = Math.max(0, Math.min(100, Number(c && c.qualification_score) || 0));
+      const scoreLevel = Math.max(1, Math.min(10, Math.ceil(score / 10)));
+      const priority = c && c.lead_temperature;
+      if (priority === "non_target") return 1;
+      if (priority === "cold") return Math.min(4, scoreLevel);
+      if (priority === "warm") return Math.max(5, Math.min(7, scoreLevel));
+      if (priority === "hot") return Math.max(8, scoreLevel);
+      return scoreLevel;
+    }
+
+    function avatarClass(c) {
+      const priority = c && c.lead_temperature;
+      const legacyClass = priority === "hot" ? "priority-hot"
+        : priority === "warm" ? "priority-warm"
+        : priority === "cold" ? "priority-cold"
+        : priority === "non_target" ? "priority-non-target"
+        : "bot";
+      return `avatar ${legacyClass} priority-level-${avatarPriorityLevel(c)}`;
+    }
+
+    function contactSubtitle(c) {
+      if (c.location_summary) return c.location_summary;
+      if (c.whatsapp_phone) return c.whatsapp_phone;
+      return c.city || "—";
+    }
+
+    function formatTime(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      const now = new Date();
+      const sameDay = d.toDateString() === now.toDateString();
+      if (sameDay) return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+      return d.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+    }
+
+    function toDatetimeLocal(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+      return local.toISOString().slice(0, 16);
+    }
+
+    function isToday(iso) {
+      if (!iso) return false;
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return false;
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear()
+        && d.getMonth() === now.getMonth()
+        && d.getDate() === now.getDate();
+    }
+
+    function formatMsgTime(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const hour = String(d.getHours()).padStart(2, "0");
+      const minute = String(d.getMinutes()).padStart(2, "0");
+      return `${year}/${month}/${day} ${hour}:${minute}`;
+    }
+
+    function chatTimeValue(contact) {
+      // 与后端排序键保持一致：sort_key = max(最后消息时间, 资料编辑时间)
+      const raw = contact && (contact.sort_key || contact.updated_at || contact.last_message_at || contact.created_at);
+      const value = raw ? Date.parse(raw) : NaN;
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    function sortContactsByChatTime(items) {
+      // 0 消息客户（批量导入、没有聊天记录）沉到列表末尾，其余按 sort_key 降序。
+      // 必须与后端规则一致：前端会重新排序，若只按 updated_at，
+      // 0 消息客户的 updated_at 就是导入时刻（最新），会被错误地顶到最前面。
+      return [...(items || [])].sort((a, b) => {
+        const ha = a && a.has_messages ? 1 : 0;
+        const hb = b && b.has_messages ? 1 : 0;
+        if (ha !== hb) return hb - ha;
+        return chatTimeValue(b) - chatTimeValue(a);
+      });
+    }
+
+    function renderStatusFilters() {
+      const items = [{ code: "all", label: "全部" }, ...customerStatuses];
+      statusFiltersEl.innerHTML = items.map((s) => {
+        const count = s.code === "all"
+          ? contacts.length
+          : contacts.filter((c) => c.customer_status === s.code).length;
+        const active = statusFilter === s.code ? "active" : "";
+        return `<button type="button" class="status-filter ${active}" data-status="${s.code}">${escapeHtml(s.label)} ${count}</button>`;
+      }).join("");
+    }
+
+    function renderPipelineFilters() {
+      const items = [{ code: "all", label: "全部阶段" }, ...salesStages];
+      const overdue = contacts.filter((c) => c.follow_up_due_at
+        && Date.parse(c.follow_up_due_at) < Date.now()).length;
+      pipelineFiltersEl.innerHTML = items.map((stage) => {
+        const count = stage.code === "all"
+          ? contacts.length
+          : contacts.filter((c) => c.sales_stage === stage.code).length;
+        const active = salesStageFilter === stage.code ? "active" : "";
+        return `<button type="button" class="status-filter ${active}" data-sales-stage="${stage.code}">${escapeHtml(stage.label)} ${count}</button>`;
+      }).join("") + (overdue
+        ? `<button type="button" class="status-filter" disabled>逾期 ${overdue}</button>`
+        : "");
+    }
+
+    function updateBulkToolbar() {
+      const checkboxes = [...contactListEl.querySelectorAll("input.contact-select")];
+      const visibleIds = checkboxes.map((checkbox) => checkbox.dataset.sessionId).filter(Boolean);
+      const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedContactIds.has(id));
+      bulkSelectCurrent.textContent = allVisibleSelected ? "取消全选当前结果" : "全选当前结果";
+      bulkSelectedCount.textContent = `已选 ${selectedContactIds.size}`;
+      bulkActionButtons.forEach((button) => {
+        button.disabled = selectedContactIds.size === 0;
+      });
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = selectedContactIds.has(checkbox.dataset.sessionId);
+      });
+    }
+
+    function updatePriorityCounts() {
+      const open = contacts.filter((c) => c.sales_stage !== "closed");
+      const setCount = (id, count) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(count);
+      };
+      setCount("priority-count-all", open.length);
+      setCount("priority-count-reply", open.filter((c) => salesQueueReplyIds.has(c.session_id)).length);
+      ["hot", "warm", "cold", "non_target"].forEach((value) => {
+        setCount(`priority-count-${value.replace("_", "-")}`,
+          open.filter((c) => (c.lead_temperature || "cold") === value).length);
+      });
+      setCount("priority-count-today", open.filter((c) => isToday(c.follow_up_due_at)).length);
+      setCount("priority-count-overdue", open.filter((c) => c.follow_up_due_at
+        && Date.parse(c.follow_up_due_at) < Date.now()).length);
+      setCount("priority-count-completed", contacts.filter((c) => c.sales_stage === "closed").length);
+    }
+
+    function filteredContacts() {
+      const q = searchEl.value.trim().toLowerCase();
+      const identityFlt = fltContactType.value;
+      const tagFlt = fltTags.value.trim().toLocaleLowerCase();
+      const wfFlt = fltWorkflow.value;
+      const stageFlt = fltSalesStage.value || (salesStageFilter === "all" ? "" : salesStageFilter);
+      const temperatureFlt = priorityFilter;
+      const stateFlt = fltState.value.trim().toLowerCase();
+      const cityFlt = fltCity.value.trim().toLowerCase();
+      return contacts.filter((c) => {
+        if (statusFilter !== "all" && c.customer_status !== statusFilter) return false;
+        if (identityFlt && (c.contact_type || c.category || "unknown") !== identityFlt) return false;
+        if (tagFlt && !(c.tags || []).filter((tag) => !typeHit(tag)).some((tag) =>
+          String(tag).toLocaleLowerCase() === tagFlt)) return false;
+        if (wfFlt === "human" && !c.human_mode) return false;
+        if (wfFlt === "ai" && c.human_mode) return false;
+        if (wfFlt === "needs_agent"
+            && c.customer_status !== "no_reply"
+            && c.workflow_status !== "escalated") return false;
+        if (stageFlt && (c.sales_stage || "new_lead") !== stageFlt) return false;
+        if (temperatureFlt === "reply" && !salesQueueReplyIds.has(c.session_id)) return false;
+        if (["hot", "warm", "cold", "non_target"].includes(temperatureFlt)
+            && (c.lead_temperature || "cold") !== temperatureFlt) return false;
+        if (temperatureFlt === "today" && !isToday(c.follow_up_due_at)) return false;
+        if (temperatureFlt === "overdue"
+            && (!c.follow_up_due_at || Date.parse(c.follow_up_due_at) >= Date.now())) return false;
+        if (temperatureFlt === "completed" && c.sales_stage !== "closed") return false;
+        if (temperatureFlt !== "completed" && c.sales_stage === "closed") return false;
+        if (stateFlt && String(c.state || "").toLowerCase() !== stateFlt
+            && !String(c.state || "").toLowerCase().includes(stateFlt)) return false;
+        if (cityFlt && !String(c.city || "").toLowerCase().includes(cityFlt)
+            && !String(c.location_summary || "").toLowerCase().includes(cityFlt)) return false;
+        if (!q) return true;
+        const hay = [
+          c.name, c.state, c.city, c.postcode, c.address, c.location_summary,
+          c.session_id, c.whatsapp_phone, c.whatsapp_profile_name,
+          c.contact_type_label, c.workflow_label, c.customer_status_label,
+          c.sales_stage_label, c.next_action,
+          c.lead_temperature_label, c.qualification_score,
+          (c.tags || []).join(" "),
+          c.search_text,
+          c.last_message,
+        ].join(" ").toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    function renderContacts() {
+      hideContactMenu();
+      const filtered = filteredContacts();
+      updatePriorityCounts();
+      const scrollTop = contactListEl.scrollTop;
+      contactListEl.innerHTML = filtered.length
+        ? filtered.map((c) => {
+            const display = c.name || c.whatsapp_phone || "未命名";
+            const preview = c.task_title || c.last_message || `${c.message_count || 0} 条消息 · ${c.contact_type_label || "未分类"}`;
+            const chips = [
+              c.task_priority ? `<span class="chip status-${c.task_priority === "urgent" ? "no_reply" : "needs_follow_up"}">${escapeHtml(c.task_priority === "urgent" ? "紧急" : c.task_priority === "high" ? "高优先" : "任务")}</span>` : "",
+              c.human_mode ? `<span class="chip human">人工</span>` : "",
+              c.archived ? `<span class="chip">归档</span>` : "",
+              c.contact_type_label && c.contact_type !== "unknown"
+                ? `<span class="chip">${escapeHtml(c.contact_type_label)}</span>` : "",
+            ].join("");
+            return `
+          <div class="contact ${c.session_id === selectedId ? "active" : ""} ${c.unread_count > 0 ? "unread" : ""}" data-id="${escapeHtml(c.session_id)}" data-task-id="${escapeHtml(c.task_id || "")}">
+            <div class="contact-select-cell">
+              <input class="contact-select" type="checkbox" data-session-id="${escapeHtml(c.session_id)}" aria-label="选择 ${escapeHtml(display)}" />
+            </div>
+            <div class="${avatarClass(c)}">${escapeHtml(avatarLabel(c))}</div>
+            <div class="contact-body">
+              <div class="row1">
+                <span class="name">${escapeHtml(display)}</span>
+                <span class="time">${escapeHtml(formatTime(c.updated_at))}</span>
+              </div>
+              <div class="row2">
+                <span class="preview">${escapeHtml(preview)}</span>
+                ${c.unread_count > 0 ? `<span class="unread-count" aria-label="${c.unread_count} 条未读消息">${c.unread_count > 99 ? "99+" : c.unread_count}</span>` : ""}
+                ${chips}
+              </div>
+            </div>
+          </div>`;
+          }).join("")
+        : `<div class="list-empty">暂无客户</div>`;
+      contactListEl.scrollTop = scrollTop;
+      renderStatusFilters();
+      renderPipelineFilters();
+      updateBulkToolbar();
+    }
+
+    function hideContactMenu() {
+      contextMenuSessionId = null;
+      contactMenu.hidden = true;
+    }
+
+    function showContactMenu(event, sessionId) {
+      const contact = contacts.find((item) => item.session_id === sessionId);
+      if (!contact) return;
+      contextMenuSessionId = sessionId;
+      const archiveButton = contactMenu.querySelector('[data-action="archive"]');
+      archiveButton.textContent = contact.archived ? "取消归档" : "归档";
+      contactMenu.hidden = false;
+      const rect = contactMenu.getBoundingClientRect();
+      const left = Math.max(8, Math.min(event.clientX, window.innerWidth - rect.width - 8));
+      const top = Math.max(8, Math.min(event.clientY, window.innerHeight - rect.height - 8));
+      contactMenu.style.left = `${left}px`;
+      contactMenu.style.top = `${top}px`;
+      contactMenu.querySelector("button")?.focus();
+    }
+
+    async function runContactMenuAction(action) {
+      const sessionId = contextMenuSessionId;
+      const contact = contacts.find((item) => item.session_id === sessionId);
+      if (!sessionId || !contact) return;
+      hideContactMenu();
+      try {
+        let response;
+        if (action === "delete") {
+          response = await authFetch(`/api/legacy/contacts/${encodeURIComponent(sessionId)}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) throw new Error("删除失败");
+          selectedContactIds.delete(sessionId);
+          if (selectedId === sessionId) {
+            selectedId = null;
+            selectedContact = null;
+            chatPanel.hidden = true;
+            emptyState.hidden = false;
+          }
+        } else if (action === "archive") {
+          response = await authFetch(`/api/legacy/contacts/${encodeURIComponent(sessionId)}/archive`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ archived: !contact.archived }),
+          });
+          if (!response.ok) throw new Error("归档失败");
+          if (selectedId === sessionId) selectedContact = await response.json();
+        } else if (action === "vip") {
+          response = await authFetch(`/api/legacy/contacts/${encodeURIComponent(sessionId)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ customer_status: "vip", customer_status_auto: false }),
+          });
+          if (!response.ok) throw new Error("重点跟进标记失败");
+          if (selectedId === sessionId) selectedContact = await response.json();
+        }
+        contactsFingerprint = "";
+        await loadContacts();
+        if (selectedId && selectedContact) {
+          fillContactForm(selectedContact);
+          updatePeerHeader(selectedContact);
+        }
+      } catch (error) {
+        alert(error?.message || "操作失败，请重试");
+      }
+    }
+
+    async function runBulkAction(action) {
+      const ids = [...selectedContactIds];
+      if (!ids.length) return;
+      bulkActionButtons.forEach((button) => { button.disabled = true; });
+      let succeeded = 0;
+      let failed = 0;
+      try {
+        for (const sessionId of ids) {
+          const contact = contacts.find((item) => item.session_id === sessionId);
+          let response;
+          if (action === "archive") {
+            response = await authFetch(`/api/legacy/contacts/${encodeURIComponent(sessionId)}/archive`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ archived: !contact?.archived }),
+            });
+          } else if (action === "vip") {
+            response = await authFetch(`/api/legacy/contacts/${encodeURIComponent(sessionId)}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ customer_status: "vip", customer_status_auto: false }),
+            });
+          }
+          if (!response || !response.ok) {
+            failed += 1;
+            continue;
+          }
+          succeeded += 1;
+        }
+        ids.forEach((sessionId) => selectedContactIds.delete(sessionId));
+        contactsFingerprint = "";
+        await loadContacts();
+        if (selectedId && selectedContact && ids.includes(selectedId)) {
+          const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(selectedId)}`);
+          if (res.ok) {
+            selectedContact = await res.json();
+            fillContactForm(selectedContact);
+            updatePeerHeader(selectedContact);
+          }
+        }
+        if (failed) alert(`已完成 ${succeeded} 个，${failed} 个失败，请刷新后重试`);
+      } catch (error) {
+        alert(error?.message || "批量操作失败，请重试");
+      } finally {
+        updateBulkToolbar();
+      }
+    }
+
+    function listFingerprint(list) {
+      return (list || []).map((c) => [
+        c.session_id,
+        c.task_id || "",
+        c.task_title || "",
+        c.updated_at || "",
+        c.name || "",
+        c.last_message || "",
+        c.customer_status || "",
+        c.sales_stage || "",
+        c.next_action || "",
+        c.follow_up_due_at || "",
+        c.qualification_score || 0,
+        c.lead_temperature || "",
+        c.human_mode ? "1" : "0",
+        c.message_count || 0,
+        c.unread_count || 0,
+      ].join("\t")).join("\n");
+    }
+
+    function roleLabel(role, extra) {
+      if (role === "user") return "客户";
+      if (role === "agent") return extra?.agent_name ? `客服 · ${extra.agent_name}` : "客服";
+      return "机器人";
+    }
+
+    function formatBubbleHtml(text) {
+      const raw = String(text ?? "").replace(/\r\n/g, "\n").trim();
+      if (!raw) return "";
+      // 双语 --- 分段：去掉段间空行，用细线分隔
+      if (/(^|\n)\s*---\s*(\n|$)/.test(raw)) {
+        const parts = raw.split(/\n\s*---\s*\n/).map((p) => p.trim()).filter(Boolean);
+        return parts.map((p, i) => {
+          const compact = escapeHtml(p.replace(/\n{2,}/g, "\n"));
+          return (i > 0 ? `<span class="msg-sep"></span>` : "")
+            + `<span class="msg-block">${compact}</span>`;
+        }).join("");
+      }
+      return `<span class="msg-primary">${escapeHtml(raw.replace(/\n{3,}/g, "\n\n"))}</span>`;
+    }
+
+    function deliveryMark(m) {
+      if (m.role !== "agent" && m.role !== "assistant") return "";
+      if (m.recorded_only) return '<span class="delivery-mark" title="仅保存到档案，未发送">仅记录</span>';
+      const labels = {sending: ["◷", "发送中"], queued: ["◷", "排队发送中"], accepted: ["◷", "等待发送"],
+        sent: ["✓", "已发送"], delivered: ["✓✓", "已送达"], read: ["✓✓", "已读"],
+        failed: ["!", "发送失败"], undelivered: ["!", "未送达"], canceled: ["!", "已取消"]};
+      const status = m.delivery_status;
+      const item = labels[status];
+      if (!item) return m.role === "agent" ? '<span class="delivery-mark" title="没有可验证的消息回执">状态未知</span>' : "";
+      const cls = status === "read" ? " read" : ["failed", "undelivered", "canceled"].includes(status) ? " failed" : "";
+      return `<span class="delivery-mark${cls}" title="${item[1]}" aria-label="${item[1]}">${item[0]}</span>`;
+    }
+
+    function renderMessages(history) {
+      // 过滤后台记账（role=system，如「[图片] 已保存: 媒体/...」）：
+      // 不是客户对话，时间戳是导入时刻，混在对话里会造成日期错乱
+      const visible = (history || []).filter((m) => m && m.role !== "system");
+      messagesEl.innerHTML = visible.map((m) => {
+        const role = m.role === "assistant" ? "assistant" : m.role;
+        const cls = role === "user" ? "user" : role === "agent" ? "agent" : "assistant";
+        const at = formatMsgTime(m.at);
+        const en = (m.content_en || m.content || "").trim();
+        const zh = (m.content_zh || "").trim();
+        let body = "";
+        if (role === "user") {
+          if (zh && zh !== en) {
+            body = formatBubbleHtml(en)
+              + `<span class="msg-secondary"><span class="lang-tag">中文</span>${escapeHtml(zh.replace(/\n{2,}/g, "\n"))}</span>`;
+          } else {
+            body = formatBubbleHtml(m.content);
+          }
+        } else if (role === "agent") {
+          if (zh && zh !== en) {
+            body = formatBubbleHtml(en)
+              + `<span class="msg-secondary"><span class="lang-tag">中文</span>${escapeHtml(zh.replace(/\n{2,}/g, "\n"))}</span>`;
+          } else {
+            body = formatBubbleHtml(m.content);
+          }
+        } else {
+          if (zh && !String(m.content).includes("---") && zh !== en) {
+            body = formatBubbleHtml(en)
+              + `<span class="msg-secondary"><span class="lang-tag">中文</span>${escapeHtml(zh.replace(/\n{2,}/g, "\n"))}</span>`;
+          } else {
+            body = formatBubbleHtml(m.content);
+          }
+        }
+        const sourceNames = [...new Set((m.knowledge_sources || [])
+          .map((item) => item && item.source)
+          .filter(Boolean))];
+        if (role === "assistant" && sourceNames.length) {
+          const confidence = m.knowledge_confidence || "unknown";
+          body += `<span class="msg-secondary"><span class="lang-tag">依据</span>${escapeHtml(sourceNames.join("、"))} · ${escapeHtml(confidence)}</span>`;
+        }
+        return `<div class="msg ${cls}">
+          <div class="meta">${roleLabel(m.role, m)}</div>
+          ${body}<span class="time">${escapeHtml(at)}${deliveryMark(m)}</span>
+        </div>`;
+      }).join("");
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function updateModeUi(contact) {
+      const on = !!contact.human_mode;
+      channelPill.textContent = "WhatsApp · 已连接";
+      modePill.textContent = on ? "人工接管中" : "AI 接待中";
+      modePill.classList.toggle("on", on);
+      btnToggle.textContent = on ? "交给 AI" : "转人工";
+      btnToggle.className = on ? "btn btn-ghost" : "btn btn-warn";
+    }
+
+    function normalizeAddressValue(address, postcode) {
+      const seen = new Set();
+      const parts = String(address || "").split(/,+/).map((part) => part.trim()).filter(Boolean)
+        .filter((part) => {
+          const key = part.toLocaleLowerCase().replace(/\s+/g, " ");
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      let value = parts.join(", ");
+      const code = String(postcode || "").trim();
+      if (code && !new RegExp(`\\b${code}\\b`).test(value)) value += `${value ? " " : ""}${code}`;
+      return value;
+    }
+
+    function fillContactForm(contact) {
+      formHydrating = true;
+      const personal = contact.personal_name
+        || stripLocationPrefix(contact.name || "");
+      const parts = splitDisplayName(personal);
+      fSurname.value = parts.surname;
+      fGiven.value = parts.given;
+      const st = (contact.state || "").toUpperCase();
+      fState.value = [...fState.options].some((o) => o.value === st) ? st : "";
+      if (st && !fState.value) {
+        const opt = document.createElement("option");
+        opt.value = st;
+        opt.textContent = st;
+        fState.appendChild(opt);
+        fState.value = st;
+      }
+      const city = contact.city || "";
+      if (city && ![...fCity.options].some((o) => o.value === city)) {
+        const opt = document.createElement("option");
+        opt.value = city;
+        opt.textContent = city;
+        fCity.appendChild(opt);
+      }
+      fCity.value = city;
+      fAddress.value = normalizeAddressValue(contact.address, contact.postcode);
+      fContactType.value = contact.contact_type || contact.category || "unknown";
+      fCustomerStatus.value = contact.customer_status_manual
+        ? (contact.customer_status || "new")
+        : "auto";
+      // 分类并入同一个标签列表（去掉重复写法），contact_type 保存时再从 chips 派生
+      selectedTags = mergeDuplicateTags((contact.tags || []).filter((tag) => !typeHit(tag)));
+      fTags.value = "";
+      renderSelectedTags();
+      renderComboOptions();
+      fWorkflow.value = contact.workflow_status || "new";
+      const actualStage = contact.sales_stage || "new_lead";
+      const actualStageLabel = contact.sales_stage_label || "新线索";
+      const stageAutoOption = fSalesStage.querySelector('option[value="auto"]');
+      if (stageAutoOption) stageAutoOption.textContent = `自动：${actualStageLabel}`;
+      fSalesStage.value = contact.sales_stage_manual ? actualStage : "auto";
+      fSalesStageAuto.checked = !contact.sales_stage_manual;
+      const actualPriority = contact.lead_temperature || "cold";
+      const actualPriorityLabel = contact.lead_temperature_label || "咨询客户";
+      const queueAutoOption = fSalesQueue.querySelector('option[value="auto"]');
+      if (queueAutoOption) queueAutoOption.textContent = `自动：${actualPriorityLabel}`;
+      fSalesQueue.value = contact.lead_temperature_manual ? actualPriority : "auto";
+      salesQueueState.textContent = contact.lead_temperature_manual
+        ? "人工设置 · 会同步到 CRM"
+        : `系统自动判断 · 当前${actualPriorityLabel}`;
+      aiStageState.textContent = contact.sales_stage_manual
+        ? "人工设置 · 会同步到 CRM"
+        : `系统自动判断 · 当前${actualStageLabel}`;
+      fNextAction.value = contact.next_action || "";
+      fNextActionAuto.checked = !contact.next_action_manual;
+      fFollowUpDue.value = toDatetimeLocal(contact.follow_up_due_at);
+      fFollowUpAuto.checked = !contact.follow_up_due_manual;
+      btnArchive.textContent = contact.archived ? "取消归档" : "归档";
+      formHydrating = false;
+    }
+
+    function updatePeerHeader(contact) {
+      const display = contact.name || contact.whatsapp_phone || "未命名";
+      peerName.textContent = display;
+      peerAvatar.textContent = avatarLabel(contact);
+      peerAvatar.className = avatarClass(contact);
+      peerSub.textContent = [
+        contact.whatsapp_phone,
+        contact.location_summary,
+        contact.customer_status_label,
+      ].filter(Boolean).join(" · ") || "—";
+    }
+
+    function renderSalesIntelligence(contact) {
+      const score = Number(contact.qualification_score || 0);
+      let summary = contact.ai_summary || "尚未生成摘要";
+      if (contact.lead_temperature === "non_target" && !summary.includes("非目标原因")) {
+        const reasons = (contact.lead_priority_reasons || []).filter(Boolean);
+        const reason = contact.lead_temperature_manual
+          ? "客服人工设置为非目标客户"
+          : (reasons.find((item) => String(item).includes("服务范围"))
+            || reasons[0]
+            || "当前资料不符合目标客户条件");
+        summary = `${summary}\n非目标原因：${reason}。`;
+      }
+      aiSalesSummary.textContent = summary;
+      qualificationChip.textContent = `${score}分 · ${contact.qualification_label || "资料较少"}`;
+      const temperature = contact.lead_temperature || "cold";
+      temperatureChip.textContent = contact.lead_temperature_label || "咨询客户";
+      temperatureChip.className = `chip temp-${temperature}`;
+      const missing = contact.qualification_missing || [];
+      const source = contact.ai_summary_source === "llm" ? "GPT" : "结构化资料";
+      aiSalesMeta.textContent = [
+        `来源：${source}`,
+        missing.length ? `待补充：${missing.join("、")}` : "关键资料已较完整",
+        contact.ai_summary_updated_at
+          ? `更新：${new Date(contact.ai_summary_updated_at).toLocaleString("zh-CN")}`
+          : null,
+      ].filter(Boolean).join(" · ");
+      crmDetailLink.href = `/crm?session=${encodeURIComponent(contact.session_id)}`;
+    }
+
+    function setCrmDrawer(open) {
+      crmDrawer.hidden = !open;
+      btnToggleCrm.textContent = open ? "收起 CRM" : "CRM 客户卡";
+      btnToggleCrm.setAttribute("aria-expanded", String(open));
+    }
+
+    function renderSessionMeta() {
+      sessionMeta.textContent = "";
+      sessionMeta.hidden = true;
+      questionnaireView.hidden = true;
+    }
+
+    async function loadCategories() {
+      const res = await authFetch("/api/legacy/contacts/categories");
+      const data = await res.json();
+      contactTypes = data.contact_types || data.categories || [];
+      customerStatuses = data.status_labels || data.customer_statuses || [];
+      workflowStatuses = data.workflow_statuses || [];
+      salesStages = data.sales_stages || [];
+      fContactType.innerHTML = contactTypes.map((c) =>
+        `<option value="${c.code}">${escapeHtml(c.code === "unknown" ? "客户身份" : c.label)}</option>`
+      ).join("");
+      fCustomerStatus.innerHTML = [
+        `<option value="auto">自动（系统判断）</option>`,
+        ...customerStatuses.map((c) =>
+          `<option value="${c.code}">${escapeHtml(c.label)}</option>`
+        ),
+      ].join("");
+      fWorkflow.innerHTML = workflowStatuses.map((c) =>
+        `<option value="${c.code}">${escapeHtml(c.label)}</option>`
+      ).join("");
+      fSalesStage.innerHTML = [
+        '<option value="auto">自动判断</option>',
+        ...salesStages.map((c) =>
+          `<option value="${c.code}">${escapeHtml(c.label)}</option>`
+        ),
+      ].join("");
+      fltContactType.innerHTML = [
+        `<option value="">客户身份</option>`,
+      ].join("");
+      fltWorkflow.innerHTML = [
+        `<option value="">处理状态</option>`,
+        `<option value="needs_agent">待客服回复</option>`,
+        `<option value="human">人工接管</option>`,
+        `<option value="ai">AI 接待</option>`,
+      ].join("");
+      fltSalesStage.innerHTML = [
+        `<option value="">销售阶段</option>`,
+        ...salesStages.map((c) =>
+          `<option value="${c.code}">${escapeHtml(c.label)}</option>`
+        ),
+      ].join("");
+      renderStatusFilters();
+      renderSelectedTags();
+      renderComboOptions();
+    }
+
+    async function loadContacts() {
+      // 老号码无任务系统：待回复队列基于未读标记，salesQueueReplyIds 恒为空集合。
+      const res = await authFetch("/api/legacy/contacts");
+      const data = await res.json();
+      salesQueueReplyIds = new Set();
+      contacts = sortContactsByChatTime(data.contacts || []);
+      const knownIds = new Set(contacts.map((contact) => contact.session_id));
+      for (const sessionId of selectedContactIds) {
+        if (!knownIds.has(sessionId)) selectedContactIds.delete(sessionId);
+      }
+      const filterSelectionChanged = refreshAdvancedFilterOptions();
+      const fp = listFingerprint(contacts) + "|" + [...salesQueueReplyIds].sort().join(",");
+      if (fp !== contactsFingerprint || filterSelectionChanged) {
+        contactsFingerprint = fp;
+        renderContacts();
+      } else {
+        renderStatusFilters();
+        renderPipelineFilters();
+      }
+      if (selectedId) {
+        const still = contacts.find((c) => c.session_id === selectedId);
+        if (!still) {
+          selectedId = null;
+          selectedContact = null;
+          chatPanel.hidden = true;
+          emptyState.hidden = false;
+        }
+      }
+    }
+
+    async function selectContact(sessionId, taskId = "") {
+      selectedId = sessionId;
+      formDirty = false;
+      formRevision = 0;
+      btnSaveContact.disabled = true;
+      saveHint.textContent = "";
+      crmSaveState.textContent = "修改后请点击“保存”";
+      const taskContext = null;
+      renderContacts();
+      const readPromise = markSelectedRead(sessionId);
+      const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(sessionId)}`);
+      selectedContact = { ...(await res.json()) };
+      if (taskContext) {
+        selectedContact.task_title = taskContext.task_title;
+        selectedContact.task_reason = taskContext.task_reason;
+        selectedContact.task_priority = taskContext.task_priority;
+        selectedContact.task_due_at = taskContext.task_due_at;
+      }
+      emptyState.hidden = true;
+      chatPanel.hidden = false;
+      fillContactForm(selectedContact);
+      updatePeerHeader(selectedContact);
+      renderMessages(selectedContact.history);
+      updateModeUi(selectedContact);
+      renderSessionMeta(selectedContact);
+      renderSalesIntelligence(selectedContact);
+      questionnaireView.textContent = JSON.stringify(selectedContact.questionnaire || {}, null, 2);
+      questionnaireView.hidden = true;
+      await readPromise;
+    }
+
+    async function markSelectedRead(sessionId) {
+      if (selectedId !== sessionId) return;
+      try {
+        const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(sessionId)}/read`, { method: "POST" });
+        if (!res.ok) return;
+        const item = contacts.find((c) => c.session_id === sessionId);
+        if (item) {
+          item.unread_count = 0;
+          contactsFingerprint = listFingerprint(contacts) + "|" + [...salesQueueReplyIds].sort().join(",");
+          renderContacts();
+        }
+      } catch { /* keep the conversation usable if the read-state request is delayed */ }
+    }
+
+    contactListEl.addEventListener("change", (e) => {
+      const checkbox = e.target.closest("input.contact-select");
+      if (!checkbox) return;
+      const sessionId = checkbox.dataset.sessionId;
+      if (!sessionId) return;
+      if (checkbox.checked) selectedContactIds.add(sessionId);
+      else selectedContactIds.delete(sessionId);
+      updateBulkToolbar();
+    });
+
+    contactListEl.addEventListener("click", (e) => {
+      if (e.target.closest("input.contact-select")) return;
+      const row = e.target.closest(".contact");
+      if (!row) return;
+      selectContact(row.dataset.id, row.dataset.taskId || "");
+    });
+
+    contactListEl.addEventListener("contextmenu", (e) => {
+      const row = e.target.closest(".contact");
+      if (!row) return;
+      e.preventDefault();
+      showContactMenu(e, row.dataset.id);
+    });
+
+    contactMenu.addEventListener("click", (e) => {
+      const button = e.target.closest("button[data-action]");
+      if (!button) return;
+      runContactMenuAction(button.dataset.action);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!contactMenu.hidden && !contactMenu.contains(e.target)) hideContactMenu();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") hideContactMenu();
+    });
+    window.addEventListener("blur", hideContactMenu);
+    window.addEventListener("resize", hideContactMenu);
+
+    searchEl.addEventListener("input", renderContacts);
+
+    statusFiltersEl.addEventListener("click", (e) => {
+      const btn = e.target.closest(".status-filter");
+      if (!btn) return;
+      statusFilter = btn.dataset.status || "all";
+      renderContacts();
+    });
+
+    pipelineFiltersEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-sales-stage]");
+      if (!btn) return;
+      salesStageFilter = btn.dataset.salesStage || "all";
+      fltSalesStage.value = salesStageFilter === "all" ? "" : salesStageFilter;
+      renderContacts();
+    });
+
+    [fltContactType, fltWorkflow, fltSalesStage, fltCity].forEach((el) => el.addEventListener("change", () => {
+      if (el === fltSalesStage) salesStageFilter = el.value || "all";
+      renderContacts();
+    }));
+    fltTags.addEventListener("change", renderContacts);
+    fltState.addEventListener("change", () => {
+      refreshAdvancedFilterOptions();
+      renderContacts();
+    });
+    fltClear.addEventListener("click", () => {
+      fltContactType.value = "";
+      fltTags.value = "";
+      fltWorkflow.value = "";
+      fltSalesStage.value = "";
+      priorityFilter = "all";
+      priorityFilters.querySelectorAll("button[data-priority]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.priority === "all");
+      });
+      salesStageFilter = "all";
+      fltState.value = "";
+      fltCity.value = "";
+      statusFilter = "all";
+      refreshAdvancedFilterOptions();
+      renderContacts();
+    });
+
+    bulkSelectCurrent.addEventListener("click", () => {
+      const checkboxes = [...contactListEl.querySelectorAll("input.contact-select")];
+      const ids = checkboxes.map((checkbox) => checkbox.dataset.sessionId).filter(Boolean);
+      const allSelected = ids.length > 0 && ids.every((id) => selectedContactIds.has(id));
+      ids.forEach((id) => {
+        if (allSelected) selectedContactIds.delete(id);
+        else selectedContactIds.add(id);
+      });
+      updateBulkToolbar();
+    });
+
+    bulkClearSelection.addEventListener("click", () => {
+      selectedContactIds.clear();
+      updateBulkToolbar();
+    });
+
+    bulkActionButtons.forEach((button) => {
+      button.addEventListener("click", () => runBulkAction(button.dataset.bulkAction));
+    });
+
+    async function saveContactForm() {
+      if (!selectedId || formHydrating || saving || !formDirty) return;
+      saving = true;
+      const savingRevision = formRevision;
+      btnSaveContact.disabled = true;
+      btnSaveContact.textContent = "保存中…";
+      if (saveHint) {
+        saveHint.textContent = "保存中…";
+        saveHint.classList.remove("ok");
+      }
+      crmSaveState.textContent = "保存中…";
+      const normalizedAddress = normalizeAddressValue(fAddress.value, "");
+      try {
+        const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(selectedId)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            surname: fSurname.value.trim(),
+            given: fGiven.value.trim(),
+            state: fState.value,
+            city: fCity.value,
+            postcode: (normalizedAddress.match(/\b\d{4}\b/g) || []).at(-1) || "",
+            address: normalizedAddress,
+            contact_type: derivedContactType(),
+            customer_status: fCustomerStatus.value === "auto" ? "auto" : fCustomerStatus.value,
+            customer_status_auto: fCustomerStatus.value === "auto",
+            tags: selectedTags.slice(),
+            workflow_status: fWorkflow.value,
+            sales_stage: fSalesStage.value === "auto" ? null : fSalesStage.value,
+            sales_stage_auto: fSalesStage.value === "auto",
+            lead_temperature: fSalesQueue.value === "auto" ? null : fSalesQueue.value,
+            lead_temperature_auto: fSalesQueue.value === "auto",
+            next_action: fNextAction.value.trim(),
+            next_action_auto: fNextActionAuto.checked,
+            follow_up_due_at: fFollowUpDue.value
+              ? new Date(fFollowUpDue.value).toISOString()
+              : "",
+            follow_up_due_auto: fFollowUpAuto.checked,
+          }),
+        });
+        selectedContact = await res.json();
+        await loadContacts();
+        formDirty = formRevision !== savingRevision;
+        updatePeerHeader(selectedContact);
+        if (!formDirty) fillContactForm(selectedContact);
+        renderSalesIntelligence(selectedContact);
+        if (saveHint) {
+          saveHint.textContent = formDirty ? "待保存" : "已保存";
+          saveHint.classList.toggle("ok", !formDirty);
+        }
+        crmSaveState.textContent = formDirty ? "有未保存的修改" : "已保存";
+        renderSessionMeta(selectedContact, "联系人信息已保存");
+      } catch (err) {
+        if (saveHint) {
+          saveHint.textContent = "保存失败";
+          saveHint.classList.remove("ok");
+        }
+        crmSaveState.textContent = "保存失败";
+      } finally {
+        saving = false;
+        btnSaveContact.disabled = !formDirty;
+        btnSaveContact.textContent = "保存";
+      }
+    }
+
+    function markContactDirty() {
+      if (formHydrating || !selectedId) return;
+      formDirty = true;
+      formRevision += 1;
+      btnSaveContact.disabled = false;
+      if (saveHint) {
+        saveHint.textContent = "待保存";
+        saveHint.classList.remove("ok");
+      }
+      crmSaveState.textContent = "有未保存的修改";
+    }
+
+    // 任意栏目变化后只标记为待保存；仅点击保存按钮才提交。
+    const profileBar = document.getElementById("profile-bar");
+    fSalesStage.addEventListener("change", () => {
+      if (!formHydrating) fSalesStageAuto.checked = false;
+    });
+    fNextAction.addEventListener("input", () => {
+      if (!formHydrating) fNextActionAuto.checked = false;
+    });
+    fFollowUpDue.addEventListener("input", () => {
+      if (!formHydrating) fFollowUpAuto.checked = false;
+    });
+
+    btnRefreshSummary.addEventListener("click", async () => {
+      if (!selectedId) return;
+      btnRefreshSummary.disabled = true;
+      btnRefreshSummary.textContent = "生成中…";
+      try {
+        const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(selectedId)}/ai-summary`, {
+          method: "POST",
+        });
+        if (!res.ok) throw new Error("summary failed");
+        selectedContact = await res.json();
+        renderSalesIntelligence(selectedContact);
+        renderSessionMeta(selectedContact, "摘要已更新");
+      } catch {
+        renderSessionMeta(selectedContact, "摘要更新失败");
+      } finally {
+        btnRefreshSummary.disabled = false;
+        btnRefreshSummary.textContent = "更新摘要";
+      }
+    });
+    profileBar.addEventListener("change", (e) => {
+      const t = e.target;
+      if (formHydrating || t === fTags) return;
+      if (t instanceof HTMLSelectElement || (t instanceof HTMLInputElement && !t.readOnly)) {
+        markContactDirty();
+      }
+    });
+    profileBar.addEventListener("input", (e) => {
+      const t = e.target;
+      if (formHydrating || t === fTags) return;
+      if (t instanceof HTMLInputElement && !t.readOnly) markContactDirty();
+    });
+    crmDrawer.addEventListener("change", (e) => {
+      const t = e.target;
+      if (formHydrating) return;
+      if (t instanceof HTMLSelectElement || t instanceof HTMLInputElement) markContactDirty();
+    });
+    crmDrawer.addEventListener("input", (e) => {
+      const t = e.target;
+      if (!formHydrating && t instanceof HTMLInputElement) markContactDirty();
+    });
+    btnSaveContact.addEventListener("click", saveContactForm);
+    btnToggleCrm.addEventListener("click", () => setCrmDrawer(crmDrawer.hidden));
+    btnCloseCrm.addEventListener("click", () => setCrmDrawer(false));
+
+    // 单一标签框：既可筛选并选择已有标签，也可输入新标签后按 Enter 添加。
+    if (fTags && fTagToggle && tagField) {
+      fTags.addEventListener("focus", () => setComboDropdown(true));
+      fTags.addEventListener("input", () => {
+        setComboDropdown(true);
+        renderComboOptions();
+      });
+      fTags.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === "," || event.key === "，") {
+          event.preventDefault();
+          if (addSelectedTag(fTags.value, true)) renderComboOptions();
+        } else if (event.key === "Escape") {
+          setComboDropdown(false);
+        }
+      });
+      fTagToggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        setComboDropdown(!comboOpen);
+        if (comboOpen) fTags.focus();
+      });
+      document.addEventListener("click", (event) => {
+        if (!tagField.contains(event.target)) setComboDropdown(false);
+      });
+    }
+
+    priorityFilters.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-priority]");
+      if (!btn) return;
+      priorityFilter = btn.dataset.priority || "all";
+      priorityFilters.querySelectorAll("button[data-priority]").forEach((b) => {
+        b.classList.toggle("active", b === btn);
+      });
+      renderContacts();
+    });
+
+    btnArchive.addEventListener("click", async () => {
+      if (!selectedId || !selectedContact) return;
+      const next = !selectedContact.archived;
+      const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(selectedId)}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: next }),
+      });
+      selectedContact = await res.json();
+      await loadContacts();
+      const still = contacts.find((c) => c.session_id === selectedId);
+      if (!still) {
+        selectedId = null;
+        selectedContact = null;
+        chatPanel.hidden = true;
+        emptyState.hidden = false;
+      } else {
+        fillContactForm(selectedContact);
+        updatePeerHeader(selectedContact);
+        renderSessionMeta(selectedContact, next ? "已归档" : "已取消归档");
+      }
+    });
+
+    btnDelete.addEventListener("click", async () => {
+      if (!selectedId) return;
+      const sid = selectedId;
+      await authFetch(`/api/legacy/contacts/${encodeURIComponent(sid)}`, { method: "DELETE" });
+      selectedId = null;
+      selectedContact = null;
+      chatPanel.hidden = true;
+      emptyState.hidden = false;
+      contactsFingerprint = "";
+      await loadContacts();
+    });
+
+    btnToggle.addEventListener("click", async () => {
+      if (!selectedId || !selectedContact) return;
+      const enabled = !selectedContact.human_mode;
+      const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(selectedId)}/human-mode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      selectedContact = await res.json();
+      updateModeUi(selectedContact);
+      updatePeerHeader(selectedContact);
+      await loadContacts();
+    });
+
+    agentForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!selectedId) return;
+      const message = agentInput.value.trim();
+      if (!message) return;
+      const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(selectedId)}/agent-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, agent_name: "客服" }),
+      });
+      const data = await res.json();
+      agentInput.value = "";
+      agentInput.style.height = "auto";
+      selectedContact = data;
+      renderMessages(data.history);
+      updateModeUi(data);
+      await loadContacts();
+      if (data.delivery && data.delivery.type === "catalog") {
+        if (data.delivery.sent) {
+          const items = (data.delivery.items || []).join("、");
+          renderSessionMeta(data, `已向客户 WhatsApp 发送商品目录：${items}`);
+          alert(`已向客户发送商品目录：${items}`);
+        } else {
+          const err = data.delivery.error || data.delivery.note || "未知错误";
+          renderSessionMeta(data, `目录未发出：${err}`);
+          alert(`商品目录未发出：\n${err}`);
+        }
+      } else if (data.learned && data.learned.saved) {
+        renderSessionMeta(data, "已发送 · 话术已自动收录");
+      } else if (data.delivery && !data.delivery.sent && data.delivery.note) {
+        renderSessionMeta(data, `已记录 · ${data.delivery.note}`);
+      } else if (data.delivery && !data.delivery.sent && data.delivery.error) {
+        renderSessionMeta(data, `发送失败：${data.delivery.error}`);
+      } else {
+        renderSessionMeta(data, "已发送");
+      }
+    });
+
+    // ===== 斜杠模板选择器 =====
+    function slashQuery() {
+      const m = agentInput.value.match(/^\s*\/([^\s]*)$/);
+      return m ? m[1] : null;
+    }
+
+    function renderTplList() {
+      const q = (slashQuery() || "").toLowerCase();
+      tplMatches = SLASH_TEMPLATES.filter((t) =>
+        !q || t.key.toLowerCase().indexOf(q) !== -1 ||
+        t.name.toLowerCase().indexOf(q) !== -1
+      );
+      if (tplActiveIdx >= tplMatches.length) tplActiveIdx = 0;
+
+      if (!tplMatches.length) {
+        tplList.innerHTML = '<div class="tpl-empty">没有匹配的模板</div>';
+        return;
+      }
+      tplList.innerHTML = "";
+      tplMatches.forEach((t, i) => {
+        const el = document.createElement("div");
+        el.className = "tpl-item" + (i === tplActiveIdx ? " active" : "");
+        el.innerHTML =
+          '<span class="tpl-name">' + escapeHtml(t.name) + "</span>" +
+          '<span class="tpl-desc">' + escapeHtml(t.desc) + "</span>";
+        el.addEventListener("mousedown", (ev) => ev.preventDefault());
+        el.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          insertTemplate(t);
+        });
+        tplList.appendChild(el);
+      });
+    }
+
+    function openTplPop() {
+      tplOpen = true;
+      tplActiveIdx = 0;
+      tplPop.classList.add("show");
+      renderTplList();
+    }
+
+    function closeTplPop() {
+      if (!tplOpen) return;
+      tplOpen = false;
+      tplPop.classList.remove("show");
+      tplList.innerHTML = "";
+      tplMatches = [];
+    }
+
+    function syncTplPop() {
+      if (!selectedId) { closeTplPop(); return; }
+      if (slashQuery() === null) { closeTplPop(); return; }
+      if (!tplOpen) openTplPop();
+      else renderTplList();
+    }
+
+    function insertTemplate(t) {
+      // 只提交斜杠命令，让后端按模板 SID 发送真实 WhatsApp Card。
+      // 不能把模板正文插入输入框，否则会被当作普通文本发送。
+      agentInput.value = "/" + t.key;
+      closeTplPop();
+      agentInput.style.height = "auto";
+      agentInput.style.height = Math.min(agentInput.scrollHeight, 120) + "px";
+      agentInput.focus();
+      try {
+        agentInput.setSelectionRange(agentInput.value.length, agentInput.value.length);
+      } catch (e) { /* ignore */ }
+      renderSessionMeta(selectedContact, "已选择模板：" + t.name + "，确认后发送");
+    }
+
+    function moveTplActive(delta) {
+      if (!tplMatches.length) return;
+      tplActiveIdx = (tplActiveIdx + delta + tplMatches.length) % tplMatches.length;
+      renderTplList();
+      const act = tplList.querySelector(".tpl-item.active");
+      if (act && act.scrollIntoView) act.scrollIntoView({ block: "nearest" });
+    }
+
+    agentInput.addEventListener("input", () => {
+      agentInput.style.height = "auto";
+      agentInput.style.height = Math.min(agentInput.scrollHeight, 120) + "px";
+      syncTplPop();
+    });
+
+    agentInput.addEventListener("keydown", (e) => {
+      if (tplOpen) {
+        if (e.key === "ArrowDown") { e.preventDefault(); moveTplActive(1); return; }
+        if (e.key === "ArrowUp")   { e.preventDefault(); moveTplActive(-1); return; }
+        if (e.key === "Escape")    { e.preventDefault(); closeTplPop(); return; }
+        if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey) {
+          if (tplMatches[tplActiveIdx]) {
+            e.preventDefault();
+            insertTemplate(tplMatches[tplActiveIdx]);
+            return;
+          }
+        }
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        agentForm.requestSubmit();
+      }
+    });
+
+    // 点击输入框以外区域关闭
+    document.addEventListener("click", (e) => {
+      if (!tplOpen) return;
+      if (tplPop.contains(e.target) || e.target === agentInput) return;
+      closeTplPop();
+    });
+
+    function applySidebarWidth(px) {
+      const min = 260;
+      const max = Math.min(560, Math.floor(window.innerWidth * 0.55));
+      const w = Math.max(min, Math.min(max, Math.round(px)));
+      document.documentElement.style.setProperty("--sidebar-w", w + "px");
+      if (sidebarEl) sidebarEl.style.width = w + "px";
+      try { localStorage.setItem("adminSidebarW", String(w)); } catch { /* ignore */ }
+      return w;
+    }
+
+    (function initSidebarResize() {
+      let saved = 380;
+      try { saved = parseInt(localStorage.getItem("adminSidebarW") || "380", 10) || 380; } catch { /* ignore */ }
+      applySidebarWidth(saved);
+      if (!sidebarResizer) return;
+      let dragging = false;
+      sidebarResizer.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        dragging = true;
+        sidebarResizer.classList.add("dragging");
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        applySidebarWidth(e.clientX);
+      });
+      window.addEventListener("mouseup", () => {
+        if (!dragging) return;
+        dragging = false;
+        sidebarResizer.classList.remove("dragging");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      });
+    })();
+
+    // ———— 老号码专属：AI 历史分析栏（其余功能与新号码工作台一致）————
+    const analysisScope = document.getElementById("analysis-scope");
+    const analysisRun = document.getElementById("analysis-run");
+    const analysisTargetCount = document.getElementById("analysis-target-count");
+    const analysisTargetLabel = document.getElementById("analysis-target-label");
+    const analysisMessage = document.getElementById("analysis-message");
+    let analysisRunning = false;
+
+    function analysisSessionIds() {
+      if (analysisScope.value === "selected") return selectedId ? [selectedId] : [];
+      if (analysisScope.value === "filtered") return filteredContacts().map((c) => c.session_id).filter(Boolean);
+      return [];
+    }
+
+    function updateAnalysisTargetCount() {
+      const count = analysisSessionIds().length;
+      const all = analysisScope.value === "all";
+      analysisTargetCount.textContent = all ? "全部" : String(count);
+      analysisTargetLabel.textContent = all ? "老号码联系人（含已归档）" : " 位联系人";
+      analysisRun.disabled = analysisRunning || (!all && count === 0);
+    }
+
+    function setAnalysisMessage(text) {
+      analysisMessage.textContent = String(text || "");
+    }
+
+    function completedAnalysisText(job) {
+      const parts = [
+        `检查 ${Number(job.scanned || 0)}`,
+        `更新 ${Number(job.updated || 0)}`,
+        `补全字段 ${Number(job.fields_updated || 0)}`,
+        `地址 ${Number(job.location_updated || 0)}`,
+        `摘要 ${Number(job.summarized || 0)}`,
+      ];
+      if (job.message) parts.push(String(job.message));
+      return parts.join(" · ");
+    }
+
+    async function refreshAfterAnalysis() {
+      const sessionId = selectedId;
+      contactsFingerprint = "";
+      await loadCategories();
+      await loadContacts();
+      if (!sessionId || selectedId !== sessionId) return;
+      const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(sessionId)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (selectedId !== sessionId) return;
+      selectedContact = data;
+      fillContactForm(data);
+      updatePeerHeader(data);
+      renderMessages(data.history);
+      renderSessionMeta(data, "AI 分析完成");
+      renderSalesIntelligence(data);
+    }
+
+    async function pollAnalysisJob(jobId) {
+      for (;;) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const res = await authFetch(`/api/legacy/analyze/${encodeURIComponent(jobId)}`);
+        if (!res.ok) throw new Error(`查询任务失败（${res.status}）`);
+        const job = await res.json();
+        if (job.status === "completed") {
+          const summary = completedAnalysisText(job);
+          setAnalysisMessage(summary);
+          try {
+            await refreshAfterAnalysis();
+          } catch {
+            setAnalysisMessage(`${summary} · 结果刷新失败，请手动刷新页面`);
+          }
+          return;
+        }
+        if (job.status === "failed") throw new Error(job.message || "AI 分析任务失败");
+        const total = Number(job.total || 0);
+        const processed = Number(job.processed || 0);
+        const progress = total > 0 ? `：已分析 ${processed} / ${total}` : "";
+        setAnalysisMessage(job.status === "running" ? `分析中${progress}` : "等待分析");
+      }
+    }
+
+    async function runAnalysis() {
+      if (analysisRunning) return;
+      const sessionIds = analysisSessionIds();
+      if (analysisScope.value !== "all" && !sessionIds.length) {
+        setAnalysisMessage("当前范围没有联系人");
+        return;
+      }
+      analysisRunning = true;
+      updateAnalysisTargetCount();
+      setAnalysisMessage("正在创建任务…");
+      try {
+        const res = await authFetch("/api/legacy/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scope: analysisScope.value,
+            session_ids: sessionIds,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        let jobId = data.job_id;
+        if (res.status === 409) {
+          const detail = data && data.detail;
+          jobId = jobId || (detail && (detail.active_job_id || detail.job_id));
+          if (!jobId) throw new Error(typeof detail === "string" ? detail : "已有分析任务正在运行");
+          setAnalysisMessage("继续查看正在运行的任务…");
+        } else if (!res.ok) {
+          const detail = data && data.detail;
+          throw new Error(typeof detail === "string" ? detail : `创建任务失败（${res.status}）`);
+        }
+        if (!jobId) throw new Error("服务器未返回任务编号");
+        await pollAnalysisJob(jobId);
+      } catch (error) {
+        setAnalysisMessage(`失败：${error.message || "未知错误"}`);
+      } finally {
+        analysisRunning = false;
+        updateAnalysisTargetCount();
+      }
+    }
+
+    analysisScope.addEventListener("change", updateAnalysisTargetCount);
+    analysisRun.addEventListener("click", runAnalysis);
+    updateAnalysisTargetCount();
+
+    async function init() {
+      try {
+        const sessionRes = await fetch("/api/admin/session", { credentials: "same-origin" });
+        if (sessionRes.ok) {
+          const session = await sessionRes.json();
+          if (session.auth_required && !session.authenticated) {
+            location.href = "/admin/login";
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+      await loadCategories();
+      await loadContacts();
+      const params = new URLSearchParams(location.search);
+      const sid = params.get("session");
+      if (sid) await selectContact(sid);
+      else if (contacts.length) await selectContact(contacts[0].session_id);
+      pollTimer = setInterval(async () => {
+        await loadContacts();
+        if (selectedId) {
+          try {
+            const res = await authFetch(`/api/legacy/contacts/${encodeURIComponent(selectedId)}`);
+            const data = await res.json();
+            if (data.updated_at !== selectedContact?.updated_at) {
+              selectedContact = data;
+              const editingContact = profileBar.contains(document.activeElement)
+                || crmDrawer.contains(document.activeElement);
+              if (!formDirty && !editingContact) fillContactForm(data);
+              updatePeerHeader(data);
+              renderMessages(data.history);
+              updateModeUi(data);
+              renderSessionMeta(data, `已刷新 ${new Date().toLocaleTimeString("zh-CN")}`);
+              renderSalesIntelligence(data);
+            }
+            if (data.unread_count > 0) await markSelectedRead(selectedId);
+          } catch { /* ignore */ }
+        }
+      }, 5000);
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grannyflat-whatsapp-bot"
+version = "0.3.5"
+description = "LLM-powered granny flat sales chatbot with structured quote intake (WhatsApp-ready)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.8.0",
+  "pydantic-settings>=2.4.0",
+  "httpx>=0.27.0,<0.28.0",
+  "openai>=1.40.0",
+  "python-dotenv>=1.0.1",
+  "pyyaml>=6.0.2",
+  "numpy>=2.0.0",
+  "python-multipart>=0.0.9",
+  "openpyxl>=3.1.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+grannyflat-bot = "grannyflat_bot.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+grannyflat_bot = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

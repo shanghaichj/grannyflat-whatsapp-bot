@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>客服工作台登录 · Granny Flat Bot</title>
+  <style>
+    :root {
+      --wa-green: #00a884;
+      --wa-green-dark: #008069;
+      --wa-bg: #f0f2f5;
+      --wa-panel: #ffffff;
+      --wa-text: #111b21;
+      --wa-muted: #667781;
+      --wa-border: #e9edef;
+      --wa-danger: #c62828;
+      --wa-shadow: 0 1px 3px rgba(11, 20, 26, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(165deg, #e8f8f3 0%, #f0f2f5 50%, #efeae2 100%);
+      color: var(--wa-text);
+      font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      padding: 1rem;
+    }
+    .card {
+      width: min(420px, 100%);
+      background: var(--wa-panel);
+      border: 1px solid var(--wa-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--wa-shadow);
+    }
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.25rem;
+    }
+    p {
+      margin: 0 0 1.25rem;
+      color: var(--wa-muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+    label {
+      display: block;
+      margin: 0.75rem 0 0.35rem;
+      font-size: 0.85rem;
+      color: var(--wa-green-dark);
+      font-weight: 600;
+    }
+    input {
+      width: 100%;
+      border: 1px solid var(--wa-border);
+      background: #fff;
+      color: var(--wa-text);
+      border-radius: 8px;
+      padding: 0.7rem 0.8rem;
+      font: inherit;
+    }
+    input:focus {
+      outline: 2px solid rgba(0, 168, 132, 0.35);
+      border-color: var(--wa-green);
+    }
+    button {
+      width: 100%;
+      margin-top: 1rem;
+      border: 0;
+      border-radius: 8px;
+      padding: 0.75rem;
+      background: var(--wa-green);
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: var(--wa-green-dark); }
+    .error {
+      margin-top: 0.85rem;
+      color: var(--wa-danger);
+      background: #ffebee;
+      border: 1px solid #ffcdd2;
+      border-radius: 8px;
+      padding: 0.65rem 0.8rem;
+      font-size: 0.88rem;
+      display: none;
+    }
+    .warn-box {
+      margin-top: 0.85rem;
+      color: #ef6c00;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      padding: 0.65rem 0.8rem;
+      font-size: 0.88rem;
+      display: none;
+    }
+    .warn-box a { color: var(--wa-green-dark); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <form class="card" id="login-form">
+    <h1>客服工作台登录</h1>
+    <p>请输入管理员账号和密码。登录状态有效期为 <strong>7 天</strong>，到期后需重新登录。</p>
+    <label for="username">用户名</label>
+    <input id="username" name="username" autocomplete="username" value="admin" required />
+    <label for="password">密码</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required />
+    <button type="submit">登录</button>
+    <div class="error" id="error"></div>
+    <div class="warn-box" id="warn-open"></div>
+  </form>
+  <script>
+    const form = document.getElementById("login-form");
+    const errorEl = document.getElementById("error");
+    const warnOpenEl = document.getElementById("warn-open");
+
+    // 登录后跳回原页面：只接受站内相对路径，防开放重定向
+    function afterLoginTarget() {
+      try {
+        const raw = new URLSearchParams(location.search).get("next") || "";
+        if (!raw) return "/admin";
+        // 必须是以单个 / 开头的站内路径（排除 //evil.com 这种协议相对写法）
+        if (raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\")) {
+          return raw;
+        }
+      } catch (e) { /* ignore */ }
+      return "/admin";
+    }
+
+    (async function boot() {
+      try {
+        const res = await fetch("/api/admin/session", { credentials: "same-origin" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.authenticated) {
+          location.href = afterLoginTarget();
+          return;
+        }
+        if (!data.auth_required && data.admin_open) {
+          warnOpenEl.innerHTML = "服务器未启用登录密码，工作台可直接访问。<a href=\"" +
+            afterLoginTarget() + "\">进入工作台</a>";
+          warnOpenEl.style.display = "block";
+        }
+      } catch { /* ignore */ }
+    })();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorEl.style.display = "none";
+      try {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          errorEl.textContent = data.detail || "登录失败";
+          errorEl.style.display = "block";
+          return;
+        }
+        location.href = afterLoginTarget();
+      } catch {
+        errorEl.textContent = "网络错误，请重试";
+        errorEl.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>
